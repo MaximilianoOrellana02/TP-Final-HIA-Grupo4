@@ -1,0 +1,96 @@
+<div class="page">
+    <header class="page-header">
+        <h1>Historial</h1>
+        <span class="date-pill">{{ fechaActualTexto }}</span>
+    </header>
+
+    <div class="filter-chips">
+        <button type="button" class="chip" [class.active]="filtro() === 'hoy'" (click)="cambiarFiltro('hoy')">Hoy</button>
+        <button type="button" class="chip" [class.active]="filtro() === 'semana'" (click)="cambiarFiltro('semana')">7 días</button>
+        <button type="button" class="chip" [class.active]="filtro() === 'mes'" (click)="cambiarFiltro('mes')">Este mes</button>
+        <button type="button" class="chip" [class.active]="filtro() === 'todos'" (click)="cambiarFiltro('todos')">Todos</button>
+    </div>
+
+    <section class="summary-card" aria-label="Resumen del período">
+        <div class="summary-stats">
+            <div class="summary-stat">
+                <span>Total cobrado</span>
+                <strong>{{ resumenPeriodo() ? '$' + formatearMonto(resumenPeriodo()!.totalPagado) : '—' }}</strong>
+            </div>
+            <div class="summary-stat">
+                <span>{{ etiquetaEntregas() }}</span>
+                <div><strong>{{ resumenPeriodo()?.cantidadEntregas ?? '—' }}</strong><small>Completadas</small></div>
+            </div>
+        </div>
+        <div class="summary-actions">
+            <button type="button" class="btn-dashboard" (click)="abrirDashboard()">
+                <i class="bi bi-bar-chart-line"></i> Ver resumen
+            </button>
+            <button type="button" class="btn-exportar" (click)="exportarExcel()" [disabled]="exportando()">
+                <i class="bi bi-file-earmark-arrow-down"></i>
+                {{ exportando() ? 'Generando...' : 'Exportar Excel' }}
+            </button>
+        </div>
+    </section>
+
+    @if (mostrarDashboard()) {
+    <app-dashboard-modal [desde]="rangoFechas().desde" [hasta]="rangoFechas().hasta"
+        [etiquetaPeriodo]="etiquetaFiltroActual()" [esMesActual]="filtro() === 'mes'"
+        (cerrar)="cerrarDashboard()"></app-dashboard-modal>}
+
+
+    <div class="list-heading"><h2>{{ tituloEntregas() }}</h2><span>{{ totalRegistros() }} registros</span></div>
+
+    @if (cargando()) {
+    <div class="state-message">
+        <div class="spinner"></div>
+    </div>
+    }
+
+    @if (error()) {
+    <div class="state-message error">
+        <i class="bi bi-exclamation-triangle"></i>
+        <p>{{ error() }}</p>
+    </div>
+    }
+
+    @if (!cargando() && entregas().length === 0 && !error()) {
+    <div class="state-message empty">
+        <i class="bi bi-clock-history"></i>
+        <p>No hay entregas en este período</p>
+    </div>
+    }
+
+    <ul class="entrega-list">
+        @for (entrega of entregas(); track entrega.id) {
+        <li class="entrega-card" [routerLink]="['/clientes', entrega.clienteId]">
+            <div class="entrega-info">
+                <div class="cliente-line">
+                    <span class="entrega-cliente">{{ entrega.cliente?.apellido }}, {{ entrega.cliente?.nombre }}</span>
+                    @if (resumenProductos(entrega); as productos) { <span class="product-chip">{{ productos }}</span> }
+                </div>
+                <span class="entrega-meta">
+                    <i class="bi bi-clock"></i> {{ formatearFecha(entrega.fecha) }} <span class="meta-dot">·</span> {{ entrega.usuario?.nombreCompleto || 'Sin repartidor' }}
+                </span>
+                @if (entrega.ajusteSaldo; as ajuste) {
+                <span class="entrega-ajuste">Saldo anterior ajustado: ${{ ajuste.saldoEsperado }} → ${{ ajuste.saldoNuevo }}.
+                    {{ ajuste.motivo }}</span>
+                }
+            </div>
+
+            <div class="entrega-amounts">
+                <span class="amount-total">${{ formatearMonto(entrega.importeTotal) }}</span>
+                <span class="amount-paid" [class.pending]="entrega.montoPagado <= 0" [class.partial]="entrega.montoPagado > 0 && entrega.montoPagado < entrega.importeTotal">
+                    <span class="payment-dot"></span><span class="payment-text">{{ etiquetaPago(entrega) }}</span>
+                </span>
+            </div>
+        </li>
+        }
+    </ul>
+
+    @if (!cargando() && hayMasPaginas()) {
+    <button class="btn-load-more" (click)="verMas()" [disabled]="cargandoMas()">
+        {{ cargandoMas() ? 'Cargando...' : 'Ver más' }}
+    </button>
+    }
+</div>

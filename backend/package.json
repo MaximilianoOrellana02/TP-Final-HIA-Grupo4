@@ -1,0 +1,46 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "tsc",
+    "prestart": "npm run db:migrate -- --env development",
+    "start": "node dist/server.js",
+    "test": "npm run build && node --test tests/usuario.unit.test.cjs tests/cliente.unit.test.cjs tests/barrio.unit.test.cjs tests/stock.unit.test.cjs tests/producto.unit.test.cjs tests/historial.unit.test.cjs",
+    "test:integration": "npm run build && node --test tests/usuario.integration.test.cjs tests/cliente.integration.test.cjs tests/barrio.integration.test.cjs tests/stock.integration.test.cjs tests/producto.integration.test.cjs tests/historial.integration.test.cjs tests/reparto.integration.test.cjs",
+    "db:migrate": "sequelize-cli db:migrate",
+    "db:reset": "npm run build && node scripts/reset-db.js",
+    "db:admin": "npm run build && node scripts/crear-admin.js",
+    "db:demo": "npm run build && node scripts/datos-demo.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "jsonwebtoken": "^9.0.3",
+    "mercadopago": "^3.2.0",
+    "mysql2": "^3.22.6",
+    "nodemailer": "^9.0.3",
+    "sequelize": "^6.37.8",
+    "validator": "^13.15.35"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.1.1",
+    "@types/nodemailer": "^8.0.1",
+    "@types/validator": "^13.15.10",
+    "sequelize-cli": "^6.6.5",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
+  }
+}

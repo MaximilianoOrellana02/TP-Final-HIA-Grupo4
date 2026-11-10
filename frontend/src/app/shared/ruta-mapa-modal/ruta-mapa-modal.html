@@ -1,0 +1,120 @@
+<div class="backdrop" (click)="cerrar.emit()"></div>
+
+<section class="sheet" role="dialog" aria-modal="true" aria-labelledby="ruta-titulo">
+  <div class="sheet-handle"></div>
+
+  <header class="sheet-header">
+    <div>
+      <h2 id="ruta-titulo">Ruta sugerida</h2>
+      <p>{{ localidadTitulo() }} · {{ repartoActivo() ? 'Reparto activo' : 'Paradas pendientes' }}</p>
+    </div>
+    <button class="btn-close" type="button" (click)="cerrar.emit()" aria-label="Cerrar mapa">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </header>
+
+  @if (errorRuta()) {
+  <div class="aviso-error-bloque">
+    <p><i class="bi bi-info-circle"></i> {{ errorRuta() }}</p>
+    @if (gpsDisponible) {
+    <button class="btn-reintentar" type="button" (click)="reintentar()">
+      <i class="bi bi-arrow-clockwise"></i> Reintentar
+    </button>
+    }
+  </div>
+  }
+
+  @if (ubicacionActual()) {
+  <div class="filtro-cercania">
+    <div class="filtro-titulo">
+      <span><i class="bi bi-geo-alt"></i> Cerca de mí</span>
+      <span>{{ clientesParaRuta().length }} de {{ clientesConUbicacion().length }} paradas</span>
+    </div>
+    <div class="filtro-opciones" role="group" aria-label="Filtrar paradas por distancia">
+      <button type="button" [disabled]="calculandoRuta()" [class.activo]="filtroRadioKm() === null" [attr.aria-pressed]="filtroRadioKm() === null" (click)="cambiarFiltro(null)">Todas</button>
+      <button type="button" [disabled]="calculandoRuta()" [class.activo]="filtroRadioKm() === 0.5" [attr.aria-pressed]="filtroRadioKm() === 0.5" (click)="cambiarFiltro(0.5)">500 m</button>
+      <button type="button" [disabled]="calculandoRuta()" [class.activo]="filtroRadioKm() === 1" [attr.aria-pressed]="filtroRadioKm() === 1" (click)="cambiarFiltro(1)">1 km</button>
+      <button type="button" [disabled]="calculandoRuta()" [class.activo]="filtroRadioKm() === 3" [attr.aria-pressed]="filtroRadioKm() === 3" (click)="cambiarFiltro(3)">3 km</button>
+    </div>
+  </div>
+  }
+
+  <div class="mapa-shell">
+    <div #mapaContenedor class="mapa-ruta"></div>
+    @if (ubicacionActual()) {
+    <button class="btn-ubicacion" type="button" [disabled]="calculandoRuta()" (click)="actualizarUbicacion()" aria-label="Actualizar mi ubicación" title="Actualizar mi ubicación">
+      <i class="bi bi-crosshair"></i>
+    </button>
+    }
+    @if (calculandoRuta()) {
+    <div class="mapa-cargando"><span class="spinner"></span> Calculando ruta...</div>
+    } @else {
+    <div class="mapa-resumen">
+      <span class="resumen-estado"><i class="bi bi-circle-fill"></i> {{ distanciaKm() > 0 ? 'Ruta estimada' : 'Paradas visibles' }}</span>
+      <strong>{{ paradasVisibles().length }} {{ paradasVisibles().length === 1 ? 'parada' : 'paradas' }}</strong>
+      @if (distanciaKm() > 0) {
+      <span>{{ distanciaKm() | number:'1.1-1' }} km</span>
+      <span>~{{ duracionMin() | number:'1.0-0' }} min</span>
+      }
+    </div>
+    }
+  </div>
+
+  @if (clientesSinUbicacion() > 0) {
+  <p class="aviso-sin-ubicacion"><i class="bi bi-info-circle"></i> {{ clientesSinUbicacion() }} cliente(s) sin ubicación, fuera del mapa</p>
+  }
+
+  @if (!calculandoRuta() && paradasVisibles().length > 0) {
+  <div class="acciones-ruta">
+    <button class="btn-whatsapp-modal" type="button" (click)="compartirPorWhatsapp()">
+      <i class="bi bi-whatsapp"></i> Compartir ruta por WhatsApp
+    </button>
+    <button class="btn-google-maps" type="button" (click)="iniciarNavegacion()">
+      <span class="google-maps-icon"><i class="bi bi-geo-alt-fill"></i></span>
+      <span class="google-maps-copy"><strong>Navegar con Google Maps</strong><small>Ir a la próxima parada</small></span>
+      <i class="bi bi-arrow-up-right"></i>
+    </button>
+  </div>
+  }
+
+  <section class="secuencia" aria-label="Secuencia de entrega">
+    <div class="secuencia-header">
+      <h3><i class="bi bi-circle-fill"></i> Secuencia de entrega</h3>
+      @if (paradasVisibles().length > 2) {
+      <button type="button" (click)="alternarTodasParadas()">{{ mostrarTodasParadas() ? 'Ver menos' : 'Ver todo (' + paradasVisibles().length + ')' }}</button>
+      }
+    </div>
+
+    @if (!calculandoRuta() && filtroRadioKm() !== null && paradasVisibles().length === 0) {
+    <p class="sin-paradas-cercanas">No hay paradas dentro de esta distancia.</p>
+    } @else if (!calculandoRuta() && paradasVisibles().length === 0) {
+    <p class="sin-paradas-cercanas">No hay paradas con ubicación para mostrar.</p>
+    }
+
+    <div class="lista-rapida">
+      @for (parada of paradasMostradas(); track parada.cliente.id; let i = $index) {
+      <div class="parada-fila" [class.parada-proxima]="i === 0">
+        <button class="parada-principal" type="button" (click)="seleccionarParada(parada.cliente.id)">
+          <span class="chip-numero">{{ i + 1 }}</span>
+          <span class="parada-copy">
+            <strong>{{ parada.cliente.direccion || parada.cliente.apellido + ', ' + parada.cliente.nombre }}</strong>
+            <small>{{ parada.cliente.apellido }}, {{ parada.cliente.nombre }} @if (parada.cliente.localidad) { · {{ parada.cliente.localidad }} }</small>
+            @if (horaLlegada(i); as hora) {
+            <span class="parada-eta">Llegada aprox. {{ hora }} ({{ minutosHastaParada()[i] | number:'1.0-0' }} min)</span>
+            } @else if (parada.distanciaMetros !== null) {
+            <span class="parada-eta">A {{ distanciaEnTexto(parada.distanciaMetros) }} de tu ubicación</span>
+            }
+          </span>
+          @if (i === 0) { <span class="parada-estado">Siguiente</span> }
+        </button>
+        <button class="parada-detalle" type="button" (click)="irACliente(parada.cliente.id)" [attr.aria-label]="'Ver detalle de ' + parada.cliente.nombre + ' ' + parada.cliente.apellido">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+      }
+    </div>
+    @if (minutosHastaParada().length > 0) {
+    <p class="nota-estimaciones">Horarios sin tráfico ni tiempo de entrega.</p>
+    }
+  </section>
+</section>

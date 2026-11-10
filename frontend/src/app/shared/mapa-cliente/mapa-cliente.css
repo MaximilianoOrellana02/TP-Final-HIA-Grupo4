@@ -1,0 +1,16 @@
+:host {
+  display: block;
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+}
+
+.mapa {
+  width: 100%;
+  height: var(--mapa-height, 180px);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+}

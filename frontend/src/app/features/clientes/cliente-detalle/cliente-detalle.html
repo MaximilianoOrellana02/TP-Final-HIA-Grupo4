@@ -1,0 +1,319 @@
+<div class="page">
+    <header class="page-header">
+        <a routerLink="/clientes" class="btn-icon" aria-label="Volver">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h1>Detalle de Cliente</h1>
+        @if (!editando() && cliente()) {
+        <button class="btn-icon" (click)="activarEdicion()" aria-label="Editar">
+            <i class="bi bi-pencil"></i>
+        </button>
+        } @else {
+        <span class="btn-icon-spacer"></span>
+        }
+    </header>
+
+    @if (cargando()) {
+    <div class="state-message">
+        <div class="spinner"></div>
+    </div>
+    }
+
+    @if (error() && !cliente()) {
+    <div class="state-message error">
+        <i class="bi bi-exclamation-triangle"></i>
+        <p>{{ error() }}</p>
+    </div>
+    }
+
+    @if (cliente(); as c) {
+    @if (mostrarPago()) {
+    <app-pago-modal [clienteId]="c.id" [nombreCliente]="c.nombre + ' ' + c.apellido" [saldoActual]="c.saldoActual"
+        (cerrar)="cerrarPago()" (pagoRegistrado)="onPagoRegistrado()"></app-pago-modal>
+    }
+
+    <!-- Modo lectura -->
+    @if (!editando()) {
+    <section class="cd-card cd-perfil">
+        <div class="cd-perfil-top">
+            <div class="cd-perfil-texto">
+                <h2 class="cd-nombre">
+                    {{ c.nombre }} {{ c.apellido }}
+                    @if (activo() !== null) {
+                    <span class="cd-estado" [class.inactivo]="!activo()">{{ activo() ? 'Activo' : 'Inactivo' }}</span>
+                    }
+                </h2>
+                @if (c.direccion || c.barrio) {
+                <span class="cd-direccion">{{ c.direccion }}{{ c.direccion && c.barrio ? ', ' : '' }}{{ c.barrio?.nombre }}</span>
+                }
+            </div>
+            <span class="cd-avatar">{{ iniciales(c) }}</span>
+        </div>
+
+        <div class="cd-chips">
+            @if (diasRepartoTexto) {
+            <span class="cd-chip cd-chip-dias"><i class="bi bi-calendar3"></i> {{ diasRepartoTexto }}</span>
+            }
+            <span class="cd-chip cd-chip-saldo" [class.debe]="c.saldoActual > 0" [class.favor]="c.saldoActual < 0">
+                <span class="cd-punto"></span>
+                ${{ (c.saldoActual < 0 ? -c.saldoActual : c.saldoActual) | number:'1.0-0' }}
+                {{ c.saldoActual > 0 ? 'debe' : c.saldoActual < 0 ? 'a favor' : 'al día' }}
+            </span>
+        </div>
+
+        <div class="cd-acciones">
+            <a [routerLink]="['/clientes', c.id, 'entrega']" class="cd-btn cd-btn-entrega">
+                <i class="bi bi-truck"></i> Nueva entrega
+            </a>
+            @if (c.telefono) {
+            <button type="button" class="cd-btn cd-btn-whatsapp" (click)="abrirWhatsapp(c)">
+                <i class="bi bi-whatsapp"></i> WhatsApp
+            </button>
+            }
+        </div>
+        @if (c.saldoActual > 0) {
+        <button type="button" class="cd-btn-pago" (click)="abrirPago()">
+            <i class="bi bi-check-circle"></i> Registrar pago / Saldar deuda
+        </button>
+        }
+    </section>
+
+    <div class="cd-fila">
+        <section class="cd-card cd-mini">
+            <span class="cd-mini-titulo"><i class="bi bi-box-seam"></i> Envases</span>
+            @for (e of envases(); track e.nombre) {
+            <span class="cd-mini-valor"><strong>{{ e.cantidad }}</strong> {{ e.nombre }}</span>
+            } @empty {
+            <span class="cd-mini-valor"><strong>0</strong></span>
+            }
+            <span class="cd-mini-pie">En comodato</span>
+        </section>
+        <section class="cd-card cd-mini">
+            <span class="cd-mini-titulo"><i class="bi bi-info-circle"></i> Nota repartidor</span>
+            @if (c.notaRepartidor || c.referencia) {
+            @if (c.notaRepartidor) { <span class="cd-mini-texto">{{ c.notaRepartidor }}</span> }
+            @if (c.referencia) { <span class="cd-mini-pie">{{ c.referencia }}</span> }
+            } @else {
+            <button type="button" class="cd-mini-agregar" (click)="activarEdicion()">+ Agregar indicaciones</button>
+            }
+        </section>
+    </div>
+
+    <section class="cd-card">
+        <div class="cd-dir">
+            <span class="cd-dir-icono"><i class="bi bi-geo-alt"></i></span>
+            <div class="cd-dir-texto">
+                <span class="cd-label">Dirección de entrega</span>
+                <span class="cd-dir-valor">{{ c.direccion || 'Sin registrar' }}{{ c.barrio ? ', ' + c.barrio.nombre : '' }}</span>
+            </div>
+            @if (navegarUrl(c); as url) {
+            <a [href]="url" target="_blank" rel="noopener" class="cd-navegar"><i class="bi bi-cursor"></i> Navegar</a>
+            }
+        </div>
+
+        @if ((c.latitud && c.longitud) || ajustandoUbicacion()) {
+        <div class="mapa-wrap cd-mapa">
+            <app-mapa-cliente [latitud]="c.latitud || -24.1858" [longitud]="c.longitud || -65.2995"
+                [editable]="ajustandoUbicacion()" (posicionCambiada)="onPosicionCambiada($event)"></app-mapa-cliente>
+        </div>
+        }
+        @if (!ajustandoUbicacion()) {
+        <button type="button" class="cd-ajustar" (click)="activarAjusteUbicacion()">
+            <i class="bi bi-pin-map"></i> {{ c.latitud && c.longitud ? 'Ajustar ubicación del pin' : 'Agregar al mapa manualmente' }}
+        </button>
+        } @else {
+        <div class="mapa-actions">
+            <p class="mapa-hint"><i class="bi bi-hand-index-thumb"></i> Tocá el mapa para posicionar el marcador</p>
+            <div class="mapa-buttons">
+                <button class="btn-cancel" (click)="cancelarAjusteUbicacion()">Cancelar</button>
+                <button class="btn-save" [disabled]="!nuevaUbicacion()" (click)="guardarUbicacion()">Guardar</button>
+            </div>
+        </div>
+        }
+    </section>
+
+    <section class="cd-card">
+        <div class="cd-mov-header">
+            <h3>Movimientos recientes
+                @if (totalMovimientos() > 0) { <span class="cd-contador">{{ totalMovimientos() }}</span> }
+            </h3>
+            <a [routerLink]="['/clientes', c.id, 'historial']" class="cd-link">Ver todos <i class="bi bi-chevron-right"></i></a>
+        </div>
+        @if (movimientosCargando()) {
+        <div class="state-message"><div class="spinner"></div></div>
+        } @else if (movimientos().length === 0) {
+        <p class="cd-vacio"><i class="bi bi-clock-history"></i> No hay movimientos todavía</p>
+        } @else {
+        <ul class="cd-movs">
+            @for (m of movimientos(); track m.id) {
+            <li class="cd-mov">
+                <span class="cd-mov-icono" [class]="'cd-mov-icono estado-' + m.estado">
+                    <i class="bi" [class.bi-check-lg]="m.estado === 'saldado' || m.estado === 'pago'"
+                        [class.bi-hourglass-split]="m.estado === 'parcial'" [class.bi-clock]="m.estado === 'fiado'"></i>
+                </span>
+                <span class="cd-mov-info">
+                    <span class="cd-mov-titulo">{{ m.titulo }}</span>
+                    <span class="cd-mov-sub">{{ m.subtitulo }}</span>
+                </span>
+                <span class="cd-mov-monto">
+                    <strong>${{ m.monto | number:'1.0-0' }}</strong>
+                    <span [class]="'cd-mov-estado estado-' + m.estado">{{ etiquetaEstado[m.estado] }}</span>
+                </span>
+            </li>
+            }
+        </ul>
+        }
+        <a [routerLink]="['/clientes', c.id, 'historial']" class="cd-cuenta">
+            <i class="bi bi-file-earmark-text"></i> Ver estado de cuenta corriente
+        </a>
+    </section>
+
+    <div class="danger-zone">
+        <div class="danger-zone-copy">
+            <strong>Desactivar cliente</strong>
+            <span>Dejará de aparecer en listados y recorridos.</span>
+        </div>
+        <button type="button" class="btn-deactivate" (click)="desactivar()" [disabled]="desactivando()">
+            <i class="bi bi-slash-circle"></i>
+            {{ desactivando() ? 'Desactivando…' : 'Desactivar' }}
+        </button>
+    </div>
+    }
+
+    <!-- Modo edición -->
+    @if (editando()) {
+    <form (ngSubmit)="guardar()" class="form-container">
+        <!-- SECCIÓN 1: Quién es -->
+        <div class="form-section">
+            <div class="section-header">
+                <span class="section-title">Quién es</span>
+                <span class="section-badge required">* OBLIGATORIO</span>
+            </div>
+            <div class="grid-2">
+                <div class="form-cell">
+                    <label for="nombre">NOMBRE *</label>
+                    <input id="nombre" type="text" [(ngModel)]="form.nombre" name="nombre" placeholder="Juan" />
+                </div>
+                <div class="form-cell">
+                    <label for="apellido">APELLIDO *</label>
+                    <input id="apellido" type="text" [(ngModel)]="form.apellido" name="apellido" placeholder="Pérez" />
+                </div>
+                <div class="form-cell">
+                    <label for="telefono">TELÉFONO</label>
+                    <input id="telefono" type="tel" [(ngModel)]="form.telefono" name="telefono" placeholder="388 412 3456" />
+                </div>
+                <div class="form-cell">
+                    <label for="tipoCliente">TIPO DE CLIENTE</label>
+                    <select id="tipoCliente" [(ngModel)]="form.tipoCliente" name="tipoCliente">
+                        <option value="particular">Particular</option>
+                        <option value="confianza">De confianza</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN 2: Dónde está -->
+        <div class="form-section">
+            <div class="section-header">
+                <span class="section-title">Dónde está</span>
+            </div>
+            <div class="grid-2">
+                <div class="form-cell full-width">
+                    <label for="direccion">DIRECCIÓN</label>
+                    <input id="direccion" type="text" [(ngModel)]="form.direccion" name="direccion" placeholder="Belgrano 123" />
+                </div>
+                <div class="form-cell">
+                    <label for="localidad">LOCALIDAD</label>
+                    <select id="localidad" [(ngModel)]="form.localidad" name="localidad">
+                        <option value="">Sin asignar</option>
+                        <option value="San Salvador">San Salvador</option>
+                        <option value="Palpalá">Palpalá</option>
+                    </select>
+                </div>
+                <div class="form-cell">
+                    <label for="barrio">BARRIO</label>
+                    <select id="barrio" [(ngModel)]="form.barrioId" name="barrio">
+                        <option value="">Sin asignar</option>
+                        @for (b of barrios(); track b.id) {
+                        <option [value]="b.id">{{ b.nombre }}</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-cell full-width">
+                    <label for="categoria">CATEGORÍA</label>
+                    <select id="categoria" [(ngModel)]="form.categoria" name="categoria">
+                        <option value="domicilio">Domicilio</option>
+                        <option value="restaurante">Restaurante</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Indicaciones para el repartidor -->
+        <div class="form-section">
+            <div class="section-header">
+                <span class="section-title">Indicaciones para el repartidor</span>
+            </div>
+            <div class="grid-2">
+                <div class="form-cell full-width">
+                    <label for="notaRepartidor">NOTA</label>
+                    <input id="notaRepartidor" type="text" maxlength="255" [(ngModel)]="form.notaRepartidor"
+                        name="notaRepartidor" placeholder="Timbre blanco lateral, perro chico en el patio" />
+                </div>
+                <div class="form-cell full-width">
+                    <label for="referencia">REFERENCIA</label>
+                    <input id="referencia" type="text" maxlength="100" [(ngModel)]="form.referencia" name="referencia"
+                        placeholder="Portón negro" />
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN 3: Marcar en el mapa -->
+        <div class="form-section map-section">
+            <div class="section-header map-header" (click)="toggleMapaEdicion()">
+                <div class="map-title-group">
+                    <i class="bi bi-geo-alt-fill icon-pin"></i>
+                    <div>
+                        <div class="map-title">Ubicación en el mapa</div>
+                        <div class="map-subtitle">
+                            Opcional · <span class="tag-recommended">(Recomendado)</span>
+                            @if (form.latitud && form.longitud) {
+                                · <span class="tag-marked"><i class="bi bi-check-circle-fill"></i> Marcado</span>
+                            } @else {
+                                · <span class="tag-unmarked">sin ubicar</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-toggle-map" [attr.aria-label]="mapaEdicionAbierto() ? 'Ocultar mapa' : 'Mostrar mapa'">
+                    <i class="bi" [class.bi-dash-lg]="mapaEdicionAbierto()" [class.bi-plus-lg]="!mapaEdicionAbierto()"></i>
+                </button>
+            </div>
+
+            @if (mapaEdicionAbierto()) {
+                <div class="mapa-wrap">
+                    <app-mapa-cliente 
+                        [latitud]="form.latitud || -24.1858" 
+                        [longitud]="form.longitud || -65.2995"
+                        [editable]="true" 
+                        (posicionCambiada)="onPosicionEditCambiada($event)">
+                    </app-mapa-cliente>
+                    <p class="mapa-hint">
+                        <i class="bi bi-hand-index-thumb"></i> Tocá en el mapa para ubicar al cliente
+                    </p>
+                </div>
+            }
+        </div>
+
+        <div class="form-actions">
+            <button type="button" class="btn-cancel" (click)="cancelarEdicion()">
+                Cancelar
+            </button>
+            <button type="submit" class="btn-save" [disabled]="guardando()">
+                {{ guardando() ? 'Guardando...' : 'Guardar cambios' }}
+            </button>
+        </div>
+    </form>
+    }
+    }
+</div>

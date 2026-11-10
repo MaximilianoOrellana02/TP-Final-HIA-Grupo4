@@ -1,0 +1,89 @@
+<div class="page">
+    <header class="page-header">
+        <a routerLink="/clientes" class="btn-icon" aria-label="Volver">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h1>Nuevo usuario</h1>
+        <span class="btn-icon-spacer"></span>
+    </header>
+
+    @if (exito()) {
+    <div class="fields-card success-block">
+        <i class="bi bi-check-circle"></i>
+        <p>Usuario "{{ form.username }}" creado correctamente</p>
+        <a routerLink="/clientes" class="btn-save">Listo</a>
+    </div>
+    } @else {
+    <form (ngSubmit)="guardar()" class="form-container">
+        <!-- SECCIÓN 1: Datos Personales -->
+        <div class="form-section">
+            <div class="section-header">
+                <span class="section-title">Datos Personales</span>
+                <span class="section-badge required">* OBLIGATORIO</span>
+            </div>
+            <div class="grid-2">
+                <div class="form-cell full-width">
+                    <label for="nombreCompleto">NOMBRE COMPLETO *</label>
+                    <input id="nombreCompleto" type="text" [(ngModel)]="form.nombreCompleto" name="nombreCompleto" placeholder="Juan Pérez" />
+                </div>
+                <div class="form-cell full-width">
+                    <label for="email">EMAIL *</label>
+                    <input id="email" type="email" [(ngModel)]="form.email" name="email" placeholder="ejemplo@correo.com" autocomplete="email" />
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN 2: Credenciales -->
+        <div class="form-section">
+            <div class="section-header">
+                <span class="section-title">Credenciales</span>
+                <span class="section-badge required">* OBLIGATORIO</span>
+            </div>
+            <div class="grid-2">
+                <div class="form-cell full-width">
+                    <label for="username">USUARIO *</label>
+                    <input id="username" type="text" [(ngModel)]="form.username" name="username" placeholder="jperez" autocomplete="off" />
+                </div>
+                <div class="form-cell password-cell">
+                    <label for="password">CONTRASEÑA *</label>
+                    <div class="password-input-group">
+                        <input id="password" [type]="verPassword() ? 'text' : 'password'" [(ngModel)]="form.password" name="password" autocomplete="new-password" />
+                        <button type="button" class="btn-toggle-password" (click)="togglePassword()" tabindex="-1">
+                            <i class="bi" [class.bi-eye]="!verPassword()" [class.bi-eye-slash]="verPassword()"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-cell password-cell">
+                    <label for="passwordConfirmar">CONFIRMAR CONTRASEÑA *</label>
+                    <div class="password-input-group">
+                        <input id="passwordConfirmar" [type]="verPassword() ? 'text' : 'password'" [(ngModel)]="form.passwordConfirmar" name="passwordConfirmar" autocomplete="new-password" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN 3: Rol -->
+        <div class="form-section">
+            <div class="section-header">
+                <span class="section-title">Rol</span>
+            </div>
+            <div class="grid-2">
+                <div class="form-cell full-width">
+                    <label for="rol">PERMISOS</label>
+                    <select id="rol" [(ngModel)]="form.rol" name="rol">
+                        <option value="repartidor">Repartidor</option>
+                        <option value="admin">Administrador (precios, productos y usuarios)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a routerLink="/clientes" class="btn-cancel">Cancelar</a>
+            <button type="submit" class="btn-save" [disabled]="guardando()">
+                {{ guardando() ? 'Creando...' : 'Crear usuario' }}
+            </button>
+        </div>
+    </form>
+    }
+</div>

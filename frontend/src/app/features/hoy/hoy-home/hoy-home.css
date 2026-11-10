@@ -1,0 +1,607 @@
+:host {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    color: var(--color-ink);
+}
+
+.page {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 1.25rem 1rem 2rem;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.1rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.btn-header-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border: 1.5px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-primary-dark);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    padding: 0.65rem 0.85rem;
+    border-radius: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: background 0.15s ease, transform 0.1s ease, color 0.15s ease;
+}
+
+.btn-header-action:active {
+    background: #eaf6f4;
+    transform: scale(0.96);
+}
+
+.btn-header-action.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+}
+
+.btn-header-action.active:active {
+    background: var(--color-primary-dark);
+}
+
+.fecha-texto {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-muted);
+    margin-bottom: 0.15rem;
+}
+
+.page-header h1 {
+    font-family: 'Sora', sans-serif;
+    font-weight: 800;
+    font-size: 1.8rem;
+    color: var(--color-primary-dark);
+    margin: 0;
+}
+
+.state-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 2rem 1rem;
+    color: var(--color-muted);
+    text-align: center;
+}
+
+.state-message.error {
+    color: var(--color-debt);
+}
+
+.spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ---------- Progreso ---------- */
+
+.progreso-track {
+    height: 10px;
+    background: var(--color-bg);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progreso-fill {
+    height: 100%;
+    background: var(--color-primary);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+/* ---------- Stats ---------- */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+    margin-bottom: 1.2rem;
+}
+
+.stat-box {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 0.9rem 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-muted);
+}
+
+.stat-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 800;
+    font-size: 1.3rem;
+    color: var(--color-ink);
+}
+
+/* ---------- Paradas ---------- */
+.paradas-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.paradas-header h2 {
+    font-family: 'Sora', sans-serif;
+    font-weight: 800;
+    font-size: 1.15rem;
+    margin: 0;
+}
+
+.paradas-count {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-muted);
+}
+
+.parada-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.parada-card {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 0.95rem 1rem;
+}
+
+.parada-numero {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--color-muted);
+    flex-shrink: 0;
+    width: 24px;
+}
+
+.parada-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.parada-nombre {
+    font-family: 'Sora', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--color-ink);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.parada-nombre:hover,
+.parada-nombre:active {
+    color: var(--color-primary);
+}
+
+.parada-direccion {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--color-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.paradas-realizadas-header {
+    margin-top: 1.5rem;
+}
+
+.parada-realizada {
+    background: color-mix(in srgb, var(--color-credit) 7%, var(--color-surface));
+    border-color: color-mix(in srgb, var(--color-credit) 28%, var(--color-border));
+}
+
+.realizada-check {
+    color: var(--color-primary);
+    font-size: 1.1rem;
+}
+
+.parada-estado {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-primary-dark);
+}
+
+.realizadas-empty {
+    padding: 1.25rem 1rem;
+    border: 1px dashed var(--color-border);
+    border-radius: 16px;
+}
+
+.realizadas-empty p {
+    margin: 0;
+}
+
+.btn-entregar {
+    flex-shrink: 0;
+    background: var(--color-primary);
+    color: white;
+    text-decoration: none;
+    font-family: 'Sora', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 0.65rem 1rem;
+    border-radius: 12px;
+}
+
+.stat-box-button {
+    width: 100%;
+    font: inherit;
+    cursor: pointer;
+}
+
+.stat-box-button.active {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+}
+
+.stat-box-button .bi {
+    margin-left: 0.2rem;
+}
+
+.cobrado-detalle {
+    display: grid;
+    gap: 0.55rem;
+    margin: -0.5rem 0 1.2rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    background: var(--color-surface);
+}
+
+.cobrado-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.9rem;
+}
+
+.cobrado-item span {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--color-muted);
+}
+
+.cobrado-item strong {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--color-ink);
+}
+
+.detalle-vacio {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.parada-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.btn-visitar {
+    background: var(--color-surface);
+    color: var(--color-primary-dark);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 0.65rem 0.75rem;
+    font-family: 'Sora', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    cursor: pointer;
+    min-height: 44px;
+}
+
+.btn-visitar:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+@media (max-width: 420px) {
+    .parada-card {
+        flex-wrap: wrap;
+    }
+
+    .parada-actions {
+        flex-direction: row;
+        width: 100%;
+    }
+
+    .parada-actions > * {
+        flex: 1;
+    }
+}
+
+/* ---------- Terminar reparto ---------- */
+.btn-terminar-reparto {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    margin: 0 0 0.9rem;
+    padding: 0.85rem 1rem;
+    border: none;
+    border-radius: 14px;
+    background: var(--color-credit);
+    color: white;
+    font-family: 'Sora', sans-serif;
+    font-weight: 800;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: transform 0.12s ease, opacity 0.15s ease;
+}
+
+.btn-terminar-reparto:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.btn-terminar-reparto:disabled {
+    background: var(--color-surface);
+    color: var(--color-muted);
+    border: 1.5px dashed var(--color-border);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: default;
+}
+
+/* ---------- Buscador ---------- */
+.buscador {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.9rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    background: var(--color-surface);
+    cursor: text;
+}
+
+.buscador:focus-within {
+    border-color: var(--color-primary);
+}
+
+.buscador > .bi-search {
+    color: var(--color-muted);
+    font-size: 1.05rem;
+}
+
+.buscador input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--color-ink);
+    font-family: inherit;
+    font-size: 0.95rem;
+}
+
+.buscador input::placeholder {
+    color: var(--color-muted);
+}
+
+.buscador input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+}
+
+.buscador-limpiar {
+    display: flex;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--color-muted);
+    cursor: pointer;
+}
+
+/* ---------- Fila estado del reparto + progreso ---------- */
+.resumen-fila {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+    margin-bottom: 0.9rem;
+}
+
+.tile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+    padding: 0.9rem 0.95rem;
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-family: inherit;
+    text-align: left;
+}
+
+button.tile {
+    cursor: pointer;
+    transition: transform 0.12s ease;
+}
+
+button.tile:active {
+    transform: scale(0.98);
+}
+
+.tile-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    font-family: 'Sora', sans-serif;
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: var(--color-primary-dark);
+}
+
+.tile-nombre {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tile-chevron {
+    margin-left: auto;
+    color: var(--color-muted);
+    font-size: 0.8rem;
+}
+
+.tile-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-muted);
+}
+
+.tile-sub {
+    font-size: 0.82rem;
+    color: var(--color-muted);
+}
+
+.tile-numero {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--color-ink);
+}
+
+.tile-progreso .tile-numero {
+    color: var(--color-primary-dark);
+}
+
+.tile-pie {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.4rem;
+    font-size: 0.7rem;
+    color: var(--color-muted);
+    white-space: nowrap;
+}
+
+.tile-en-curso {
+    border: 2px solid var(--color-primary);
+}
+
+.tile-comenzar {
+    position: relative;
+    border: none;
+    background: var(--color-primary);
+    color: white;
+}
+
+.tile-comenzar .tile-titulo,
+.tile-comenzar .tile-sub {
+    color: white;
+}
+
+.tile-comenzar .tile-sub {
+    opacity: 0.9;
+}
+
+.tile-flecha {
+    margin-top: auto;
+    font-size: 1.5rem;
+}
+
+.tile-terminado {
+    border: 2px solid var(--color-credit);
+}
+
+.tile-terminado .tile-titulo {
+    color: var(--color-credit);
+}
+
+/* ---------- Paradas: cobro pendiente ---------- */
+.parada-deuda {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    align-self: flex-start;
+    margin-top: 0.3rem;
+    padding: 0.25rem 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--color-warning) 55%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-warning) 14%, transparent);
+    color: #9a6a00;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.parada-deuda::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-warning);
+}
+
+:host-context([data-theme='dark']) .parada-deuda {
+    color: var(--color-warning);
+}

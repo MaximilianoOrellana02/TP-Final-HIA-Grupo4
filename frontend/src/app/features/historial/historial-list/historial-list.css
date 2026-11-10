@@ -1,0 +1,428 @@
+:host {
+    display: block;
+    min-height: 100vh;
+    background: #faf7f3;
+    font-family: 'Inter', sans-serif;
+    color: #171d26;
+}
+
+.page {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 0.7rem 1rem 2rem;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.95rem;
+}
+
+.page-header h1 {
+    font-family: 'Sora', sans-serif;
+    font-weight: 800;
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+    margin: 0;
+    color: #dd4d13;
+}
+
+.date-pill {
+    flex: 0 0 auto;
+    padding: 0.25rem 0.55rem;
+    border: 1px solid #f0e7db;
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: #968c83;
+    font-size: 0.63rem;
+}
+
+/* ---------- Filtros ---------- */
+.filter-chips {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.chip {
+    flex-shrink: 0;
+    border: 1px solid #eee4da;
+    background: var(--color-surface);
+    color: #776f69;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.45rem 0.85rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.chip.active {
+    background: #f2551c;
+    border-color: #f2551c;
+    color: white;
+    box-shadow: 0 5px 12px rgba(242, 85, 28, 0.18);
+}
+
+.summary-card {
+    padding: 0.8rem;
+    border: 1px solid #efe4d8;
+    border-radius: 15px;
+    background: var(--color-surface);
+    box-shadow: 0 3px 9px rgba(61, 39, 20, 0.04);
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid #f0e8df;
+}
+
+.summary-stat {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    min-height: 52px;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid #f2ece5;
+    border-radius: 9px;
+    background: #fcfaf8;
+    box-sizing: border-box;
+}
+
+.summary-stat>span {
+    color: #8e7b70;
+    font-size: 0.57rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.summary-stat strong {
+    color: #171d26;
+    font-family: 'Sora', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+}
+
+.summary-stat>div {
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+}
+
+.summary-stat small {
+    color: #00a56b;
+    font-size: 0.56rem;
+    font-weight: 700;
+}
+
+.summary-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    padding-top: 0.7rem;
+}
+
+/* ---------- Estados ---------- */
+.state-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 3rem 1rem;
+    color: var(--color-muted);
+    text-align: center;
+}
+
+.state-message.error {
+    color: var(--color-debt);
+}
+
+.spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ---------- Lista de entregas ---------- */
+.list-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin: 0.8rem 0 0.6rem;
+    padding: 0 0.1rem;
+}
+
+.list-heading h2 {
+    margin: 0;
+    color: #8b786e;
+    font-size: 0.63rem;
+    font-weight: 800;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+}
+
+.list-heading span {
+    color: #998b83;
+    font-size: 0.64rem;
+    white-space: nowrap;
+}
+
+.entrega-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.entrega-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.45rem;
+    background: var(--color-surface);
+    border: 1px solid #efe4d8;
+    border-radius: 13px;
+    padding: 0.8rem 0.75rem;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+    box-shadow: 0 3px 8px rgba(61, 39, 20, 0.035);
+}
+
+.entrega-card:active {
+    transform: scale(0.98);
+}
+
+.entrega-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.cliente-line {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.entrega-cliente {
+    font-family: 'Sora', sans-serif;
+    font-weight: 700;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #161b24;
+}
+
+.product-chip {
+    flex: 0 0 auto;
+    max-width: 4.2rem;
+    padding: 0.15rem 0.25rem;
+    overflow: hidden;
+    border-radius: 4px;
+    background: #eef4ff;
+    color: #2852c9;
+    font-size: 0.52rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.entrega-meta {
+    font-size: 0.63rem;
+    font-weight: 500;
+    color: #a79a90;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.entrega-meta i {
+    margin-right: 0.1rem;
+}
+
+.meta-dot {
+    color: #c6bab0;
+}
+
+.entrega-amounts {
+    flex-shrink: 0;
+    max-width: 46%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.3rem;
+}
+
+.btn-exportar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    border: 1px solid #a6edc5;
+    background: #eafff2;
+    color: #008d5f;
+    font-weight: 700;
+    font-size: 0.66rem;
+    padding: 0.55rem;
+    border-radius: 10px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.btn-exportar:disabled {
+    opacity: 0.6;
+}
+
+.btn-exportar:active {
+    background: #eafaf0;
+}
+
+.amount-total {
+    font-family: 'Sora', sans-serif;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: #f1511b;
+    white-space: nowrap;
+}
+
+.amount-paid {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    max-width: 100%;
+    padding: 0.2rem 0.35rem;
+    border: 1px solid #b0eed2;
+    border-radius: 999px;
+    background: #ebfff5;
+    color: #009569;
+    font-size: 0.55rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.amount-paid.pending,
+.amount-paid.partial {
+    border-color: #f9dc9d;
+    background: #fff8e9;
+    color: #b87610;
+}
+
+.payment-dot {
+    width: 5px;
+    height: 5px;
+    flex: 0 0 5px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.payment-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------- Ver más ---------- */
+.btn-load-more {
+    width: 100%;
+    margin-top: 0.8rem;
+    padding: 0.85rem;
+    border-radius: 13px;
+    border: 1.5px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-primary-dark);
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.btn-load-more:disabled {
+    opacity: 0.6;
+}
+
+.btn-load-more:active:not(:disabled) {
+    background: #eaf6f4;
+}
+
+.btn-dashboard {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    border: 1px solid #ffd6c1;
+    background: #fff4ee;
+    color: #ef551b;
+    font-weight: 700;
+    font-size: 0.66rem;
+    padding: 0.55rem;
+    border-radius: 10px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.btn-dashboard:active {
+    background: #eaf6f4;
+}
+
+.entrega-ajuste {
+    color: var(--color-muted);
+    font-size: 0.62rem;
+    overflow-wrap: anywhere;
+}
+
+:host-context([data-theme='dark']) {
+    background: var(--color-bg);
+    color: var(--color-ink);
+}
+
+:host-context([data-theme='dark']) .summary-card,
+:host-context([data-theme='dark']) .summary-stat,
+:host-context([data-theme='dark']) .entrega-card,
+:host-context([data-theme='dark']) .date-pill {
+    border-color: var(--color-border);
+    background: var(--color-surface);
+}
+
+:host-context([data-theme='dark']) .summary-stat strong,
+:host-context([data-theme='dark']) .entrega-cliente {
+    color: var(--color-ink);
+}
+
+.chip:focus-visible,
+.btn-dashboard:focus-visible,
+.btn-exportar:focus-visible,
+.entrega-card:focus-visible,
+.btn-load-more:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}

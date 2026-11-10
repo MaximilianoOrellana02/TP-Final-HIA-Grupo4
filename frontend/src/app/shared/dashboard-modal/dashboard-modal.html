@@ -1,0 +1,85 @@
+<div class="backdrop" (click)="cerrar.emit()"></div>
+
+<div class="sheet">
+    <div class="sheet-handle"></div>
+
+    <div class="sheet-header">
+        <h2>Resumen — {{ etiquetaPeriodo() }}</h2>
+        <button class="btn-close" (click)="cerrar.emit()" aria-label="Cerrar">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+
+    @if (cargando()) {
+    <div class="state-message">
+        <div class="spinner"></div>
+    </div>
+    }
+
+    @if (error()) {
+    <div class="state-message error">
+        <i class="bi bi-exclamation-triangle"></i>
+        <p>{{ error() }}</p>
+    </div>
+    }
+
+    @if (resumen(); as r) {
+    <div class="cards-grid">
+        <div class="stat-card">
+            <span class="stat-label">Facturado</span>
+            <span class="stat-value">${{ r.totalImporte | number:'1.0-0' }}</span>
+            @if (esMesActual() && variacion('totalImporte') !== null) {
+            <span class="stat-variacion" [class.positiva]="variacion('totalImporte')! >= 0"
+                [class.negativa]="variacion('totalImporte')! < 0">
+                <i class="bi" [class.bi-arrow-up-short]="variacion('totalImporte')! >= 0"
+                    [class.bi-arrow-down-short]="variacion('totalImporte')! < 0"></i>
+                {{ variacion('totalImporte') }}% vs. mes pasado
+            </span>
+            }
+        </div>
+
+        <div class="stat-card is-credit">
+            <span class="stat-label">Cobrado</span>
+            <span class="stat-value">${{ r.totalPagado | number:'1.0-0' }}</span>
+            @if (esMesActual() && variacion('totalPagado') !== null) {
+            <span class="stat-variacion" [class.positiva]="variacion('totalPagado')! >= 0"
+                [class.negativa]="variacion('totalPagado')! < 0">
+                <i class="bi" [class.bi-arrow-up-short]="variacion('totalPagado')! >= 0"
+                    [class.bi-arrow-down-short]="variacion('totalPagado')! < 0"></i>
+                {{ variacion('totalPagado') }}% vs. mes pasado
+            </span>
+            }
+        </div>
+
+        <div class="stat-card is-debt">
+            <span class="stat-label">Pendiente</span>
+            <span class="stat-value">${{ r.totalPendiente | number:'1.0-0' }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Entregas</span>
+            <span class="stat-value">{{ r.cantidadEntregas }}</span>
+        </div>
+    </div>
+
+    <!-- ... el resto (gráfico de barras) sigue igual ... -->
+
+
+    @if (r.productos.length > 0) {
+    <h3 class="section-title">Cantidades entregadas</h3>
+    <div class="bars">
+        @for (p of r.productos; track p.nombre) {
+        <div class="bar-row">
+            <span class="bar-label">{{ p.nombre }}</span>
+            <div class="bar-track">
+                <div class="bar-fill" [style.width.%]="(p.cantidad / maxCantidad()) * 100"></div>
+            </div>
+            <span class="bar-value">{{ p.cantidad }}</span>
+        </div>
+        }
+    </div>
+    } @else {
+    <p class="sin-datos">No hay entregas registradas en este período</p>
+    }
+    }
+
+</div>

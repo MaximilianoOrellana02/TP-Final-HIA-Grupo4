@@ -1,0 +1,84 @@
+<div class="page">
+  <header class="page-header">
+    <a routerLink="/clientes" class="btn-icon" aria-label="Volver">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h1>Barrios</h1>
+    <span class="btn-icon-spacer"></span>
+  </header>
+
+  <!-- Alta -->
+  <div class="add-card">
+    <div class="add-card-header">
+      <i class="bi bi-map-fill"></i>
+      <span>Nuevo barrio</span>
+    </div>
+    <input
+      type="text"
+      placeholder="Ej: Centro, Alto Comedero..."
+      [(ngModel)]="nombreNuevo"
+    />
+    <div class="day-chips">
+      @for (d of dias; track d.valor) {
+        <button
+          type="button"
+          class="day-chip"
+          [class.active]="diasSeleccionNuevo().has(d.valor)"
+          (click)="toggleDiaNuevo(d.valor)"
+        >{{ d.etiqueta.slice(0, 3) }}</button>
+      }
+    </div>
+    <button class="btn-add-full" (click)="agregar()" [disabled]="agregando() || !nombreNuevo.trim()">
+      <i class="bi bi-plus-lg"></i> Agregar barrio
+    </button>
+  </div>
+
+  @if (error()) {
+    <div class="form-error"><i class="bi bi-exclamation-circle"></i> {{ error() }}</div>
+  }
+
+  @if (cargando()) {
+    <div class="state-message"><div class="spinner"></div></div>
+  }
+
+  <ul class="barrio-list">
+    @for (barrio of barrios(); track barrio.id) {
+      <li class="barrio-item">
+        @if (editandoId() === barrio.id) {
+          <div class="edit-block">
+            <span class="barrio-name">{{ barrio.nombre }}</span>
+            <div class="day-chips">
+              @for (d of dias; track d.valor) {
+                <button
+                  type="button"
+                  class="day-chip"
+                  [class.active]="diasSeleccionEdicion().has(d.valor)"
+                  (click)="toggleDiaEdicion(d.valor)"
+                >{{ d.etiqueta.slice(0, 3) }}</button>
+              }
+            </div>
+            <div class="edit-actions">
+              <button class="btn-text" (click)="cancelarEdicion()">Cancelar</button>
+              <button class="btn-text primary" (click)="guardarEdicion(barrio)">Guardar</button>
+            </div>
+          </div>
+        } @else {
+          <div class="barrio-row">
+            <div>
+              <span class="barrio-name">{{ barrio.nombre }}</span>
+              <span class="barrio-dias">{{ etiquetaDias(barrio.diasVisita) }}</span>
+            </div>
+            <div class="barrio-actions">
+              <button class="btn-icon-sm" (click)="editar(barrio)" aria-label="Editar">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn-icon-sm delete" (click)="eliminar(barrio)" aria-label="Eliminar">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+        }
+      </li>
+    }
+  </ul>
+</div>

@@ -1,0 +1,67 @@
+<div class="backdrop" (click)="cerrar.emit()"></div>
+
+@if (resumen(); as r) {
+<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="tituloResumenReparto">
+    <button type="button" class="btn-close" (click)="cerrar.emit()" aria-label="Cerrar">
+        <i class="bi bi-x-lg"></i>
+    </button>
+
+    <div class="encabezado">
+        <i class="bi bi-flag-fill" aria-hidden="true"></i>
+        <div>
+            <h2 id="tituloResumenReparto">Resumen del reparto</h2>
+            <span class="subtitulo">
+                {{ r.iniciadoEn | date:'HH:mm' }} – {{ r.finalizadoEn ? (r.finalizadoEn | date:'HH:mm') : 'en curso' }}
+            </span>
+        </div>
+    </div>
+
+    <div class="cifras">
+        <div class="cifra">
+            <span class="cifra-label">Entregas</span>
+            <span class="cifra-valor">{{ r.entregas }}</span>
+        </div>
+        <div class="cifra">
+            <span class="cifra-label">Vendido</span>
+            <span class="cifra-valor">${{ r.totalVendido | number:'1.0-0' }}</span>
+        </div>
+        <div class="cifra destacada">
+            <span class="cifra-label">Cobrado</span>
+            <span class="cifra-valor">${{ r.cobrado | number:'1.0-0' }}</span>
+        </div>
+        <div class="cifra" [class.deuda]="r.fiado > 0">
+            <span class="cifra-label">Quedó fiado</span>
+            <span class="cifra-valor">${{ r.fiado | number:'1.0-0' }}</span>
+        </div>
+    </div>
+
+    <section class="bloque">
+        <h3>Cobros</h3>
+        <div class="fila"><span><i class="bi bi-cash"></i> Efectivo</span><strong>${{ r.cobradoPorMetodo.efectivo | number:'1.0-0' }}</strong></div>
+        <div class="fila"><span><i class="bi bi-bank"></i> Transferencia</span><strong>${{ r.cobradoPorMetodo.transferencia | number:'1.0-0' }}</strong></div>
+        @if (r.cobradoPorMetodo.mercadopago > 0) {
+        <div class="fila"><span><i class="bi bi-qr-code"></i> Mercado Pago</span><strong>${{ r.cobradoPorMetodo.mercadopago | number:'1.0-0' }}</strong></div>
+        }
+    </section>
+
+    <section class="bloque">
+        <h3>Productos · {{ entregados() }} entregados · {{ devueltos() }} envases devueltos</h3>
+        @for (p of r.productos; track p.nombre) {
+        <div class="fila">
+            <span>{{ p.nombre }}</span>
+            <span class="detalle"><strong>{{ p.cantidad }}</strong> entregados@if (p.devueltos > 0) { · {{ p.devueltos }} dev.}</span>
+        </div>
+        } @empty {
+        <p class="vacio">No hubo entregas en este reparto.</p>
+        }
+    </section>
+
+    <button type="button" class="btn-listo" (click)="cerrar.emit()">Listo</button>
+    @if (repartoService.terminadoHoy()) {
+    <button type="button" class="btn-cancelar-fin" (click)="cancelarFin()" [disabled]="reabriendo()">
+        <i class="bi bi-arrow-counterclockwise"></i>
+        {{ reabriendo() ? 'Reabriendo…' : 'Cancelar fin de reparto' }}
+    </button>
+    }
+</div>
+}

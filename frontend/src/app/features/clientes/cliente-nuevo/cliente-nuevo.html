@@ -1,0 +1,146 @@
+<div class="page">
+    <header class="page-header">
+        <a routerLink="/clientes" class="btn-icon" aria-label="Volver">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h1>Nuevo cliente</h1>
+        <span class="btn-icon-spacer"></span>
+    </header>
+
+    <form (ngSubmit)="guardar()" class="form-container">
+        <!-- SECCIÓN 1: Quién es -->
+        <div class="form-section">
+            <div class="section-header">
+                <span class="section-title">Quién es</span>
+                <span class="section-badge required">* OBLIGATORIO</span>
+            </div>
+            <div class="grid-2">
+                <div class="form-cell">
+                    <label for="nombre">NOMBRE *</label>
+                    <input id="nombre" type="text" [(ngModel)]="form.nombre" name="nombre" placeholder="Juan" />
+                </div>
+                <div class="form-cell">
+                    <label for="apellido">APELLIDO *</label>
+                    <input id="apellido" type="text" [(ngModel)]="form.apellido" name="apellido" placeholder="Pérez" />
+                </div>
+                <div class="form-cell">
+                    <label for="telefono">TELÉFONO</label>
+                    <input id="telefono" type="tel" [(ngModel)]="form.telefono" name="telefono" placeholder="388 412 3456" />
+                </div>
+                <div class="form-cell">
+                    <label for="tipoCliente">TIPO DE CLIENTE</label>
+                    <select id="tipoCliente" [(ngModel)]="form.tipoCliente" name="tipoCliente">
+                        <option value="particular">Particular</option>
+                        <option value="confianza">De confianza</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN 2: Dónde está -->
+        <div class="form-section">
+            <div class="section-header">
+                <span class="section-title">Dónde está</span>
+            </div>
+            <div class="grid-2">
+                <div class="form-cell full-width">
+                    <label for="direccion">DIRECCIÓN</label>
+                    <input id="direccion" type="text" [(ngModel)]="form.direccion" name="direccion" placeholder="Belgrano 123" />
+                </div>
+                <div class="form-cell">
+                    <label for="localidad">LOCALIDAD</label>
+                    <select id="localidad" [(ngModel)]="form.localidad" name="localidad">
+                        <option value="">Sin asignar</option>
+                        <option value="San Salvador">San Salvador</option>
+                        <option value="Palpalá">Palpalá</option>
+                    </select>
+                </div>
+                <div class="form-cell">
+                    <label for="barrio">BARRIO</label>
+                    <select id="barrio" [(ngModel)]="form.barrioId" name="barrio">
+                        <option value="">Sin asignar</option>
+                        @for (b of barrios(); track b.id) {
+                        <option [value]="b.id">{{ b.nombre }}</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-cell full-width">
+                    <label for="categoria">CATEGORÍA</label>
+                    <select id="categoria" [(ngModel)]="form.categoria" name="categoria">
+                        <option value="domicilio">Domicilio</option>
+                        <option value="restaurante">Restaurante</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Indicaciones para el repartidor -->
+        <div class="form-section">
+            <div class="section-header">
+                <span class="section-title">Indicaciones para el repartidor</span>
+            </div>
+            <div class="grid-2">
+                <div class="form-cell full-width">
+                    <label for="notaRepartidor">NOTA</label>
+                    <input id="notaRepartidor" type="text" maxlength="255" [(ngModel)]="form.notaRepartidor"
+                        name="notaRepartidor" placeholder="Timbre blanco lateral, perro chico en el patio" />
+                </div>
+                <div class="form-cell full-width">
+                    <label for="referencia">REFERENCIA</label>
+                    <input id="referencia" type="text" maxlength="100" [(ngModel)]="form.referencia" name="referencia"
+                        placeholder="Portón negro" />
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN 3: Marcar en el mapa -->
+        <div class="form-section map-section">
+            <div class="section-header map-header" (click)="toggleMapa()">
+                <div class="map-title-group">
+                    <i class="bi bi-geo-alt-fill icon-pin"></i>
+                    <div>
+                        <div class="map-title">Marcar en el mapa</div>
+                        <div class="map-subtitle">
+                            Opcional · <span class="tag-recommended">(Recomendado)</span>
+                            @if (form.latitud && form.longitud) {
+                                · <span class="tag-marked"><i class="bi bi-check-circle-fill"></i> Marcado</span>
+                            } @else {
+                                · <span class="tag-unmarked">sin marcar</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-toggle-map" [attr.aria-label]="mapaAbierto() ? 'Ocultar mapa' : 'Mostrar mapa'">
+                    <i class="bi" [class.bi-dash-lg]="mapaAbierto()" [class.bi-plus-lg]="!mapaAbierto()"></i>
+                </button>
+            </div>
+
+            @if (mapaAbierto()) {
+                <div class="mapa-wrap">
+                    <button type="button" class="btn-current-location" (click)="usarMiUbicacion()"
+                        [disabled]="obteniendoUbicacion() || guardando()">
+                        <i class="bi" [class.bi-crosshair]="!obteniendoUbicacion()"
+                            [class.bi-arrow-repeat]="obteniendoUbicacion()"></i>
+                        {{ obteniendoUbicacion() ? 'Buscando ubicación…' : 'Usar mi ubicación' }}
+                    </button>
+                    <app-mapa-cliente 
+                        [latitud]="form.latitud ?? -24.1858"
+                        [longitud]="form.longitud ?? -65.2995"
+                        [editable]="true" 
+                        (posicionCambiada)="onPosicionCambiada($event)">
+                    </app-mapa-cliente>
+                    <p class="mapa-hint">
+                        <i class="bi bi-hand-index-thumb"></i> Tocá en el mapa para posicionar el marcador
+                    </p>
+                </div>
+            }
+        </div>
+
+        <div class="form-actions">
+            <a routerLink="/clientes" class="btn-cancel">Cancelar</a>
+            <button type="submit" class="btn-save" [disabled]="guardando()">
+                {{ guardando() ? 'Guardando...' : 'Crear cliente' }}
+            </button>
+        </div>
+    </form>
+</div>

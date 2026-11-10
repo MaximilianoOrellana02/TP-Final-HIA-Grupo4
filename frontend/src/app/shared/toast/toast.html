@@ -1,0 +1,78 @@
+@if (notificationService.notificacion(); as n) {
+@if (n.tipo === 'confirm') {
+<div class="toast-backdrop" aria-hidden="true"></div>
+}
+<div class="floating-toast" [class.is-error]="n.tipo === 'error'" [class.is-info]="n.tipo === 'info'"
+    [class.is-success]="n.tipo === 'success'" [class.is-confirm]="n.tipo === 'confirm'"
+    [class.is-client-confirm]="!!n.detalles?.length"
+    [attr.role]="n.tipo === 'confirm' ? 'alertdialog' : 'status'" aria-live="polite">
+    @if (n.detalles?.length) {
+    <div class="client-confirmation">
+        <header class="client-confirm-header">
+            <span class="client-confirm-icon"><i class="bi bi-person-check"></i></span>
+            <div>
+                <span class="client-confirm-eyebrow">{{ n.etiquetaSuperior }}</span>
+                <strong>{{ n.titulo }}</strong>
+            </div>
+        </header>
+
+        <div class="client-confirm-details">
+            @for (detalle of n.detalles; track detalle.etiqueta) {
+            <div class="client-detail-row">
+                <span>{{ detalle.etiqueta }}</span>
+                <strong [class.detail-info]="detalle.tono === 'info'"
+                    [class.detail-warning]="detalle.tono === 'warning'">{{ detalle.valor }}</strong>
+            </div>
+            }
+        </div>
+
+        @if (n.advertencia) {
+        <div class="toast-warning">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>{{ n.advertencia }}</span>
+        </div>
+        }
+
+        <div class="toast-actions client-confirm-actions">
+            <button class="btn-cancel" type="button" (click)="notificationService.cerrar()">Cancelar</button>
+            <button class="btn-confirm" type="button" (click)="notificationService.aceptarConfirmacion()">
+                <i class="bi bi-check2"></i>
+                {{ n.etiquetaConfirmacion }}
+            </button>
+        </div>
+    </div>
+    } @else {
+    <span class="icon-wrap">
+        <i class="bi status-icon" [class.bi-wifi-off]="n.tipo === 'error'"
+            [class.bi-info-circle]="n.tipo === 'info'" [class.bi-check-circle]="n.tipo === 'success'"
+            [class.bi-person-check]="n.tipo === 'confirm'"></i>
+    </span>
+    <div class="toast-content">
+        @if (n.titulo) {
+        <strong>{{ n.titulo }}</strong>
+        }
+        <span>{{ n.mensaje }}</span>
+        @if (n.advertencia) {
+        <div class="toast-warning">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>{{ n.advertencia }}</span>
+        </div>
+        }
+        @if (n.tipo === 'confirm') {
+        <div class="toast-actions">
+            <button class="btn-cancel" type="button" (click)="notificationService.cerrar()">Cancelar</button>
+            <button class="btn-confirm" type="button" (click)="notificationService.aceptarConfirmacion()">
+                <i class="bi bi-check2"></i>
+                {{ n.etiquetaConfirmacion }}
+            </button>
+        </div>
+        }
+    </div>
+    @if (n.tipo !== 'confirm') {
+    <button class="btn-close" type="button" (click)="notificationService.cerrar()" aria-label="Cerrar">
+        <i class="bi bi-x"></i>
+    </button>
+    }
+    }
+</div>
+}

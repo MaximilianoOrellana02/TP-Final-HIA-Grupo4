@@ -1,0 +1,143 @@
+<div class="backdrop" (click)="cerrar.emit()"></div>
+
+<div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+        @if (vista() === 'password') {
+        <button class="btn-back" (click)="volverAlMenu()" aria-label="Volver">
+            <i class="bi bi-arrow-left"></i>
+        </button>
+        } @else {
+        <span class="header-icon"><i class="bi bi-gear"></i></span>
+        }
+        <div class="header-copy">
+            <h2>{{ vista() === 'menu' ? 'Configuración' : 'Cambiar contraseña' }}</h2>
+            <span>{{ vista() === 'menu' ? 'Preferencias de reparto y sistema' : 'Actualizá tus credenciales de acceso' }}</span>
+        </div>
+        <button class="btn-close" (click)="cerrar.emit()" aria-label="Cerrar">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+
+    @if (vista() === 'menu') {
+    <div class="sheet-body">
+        @if (authService.usuarioActual(); as usuario) {
+        <div class="user-card">
+            <span class="user-avatar">{{ inicialesUsuario() }}</span>
+            <div class="user-copy">
+                <strong>{{ usuario.nombreCompleto }}</strong>
+                <span>{{ authService.esAdmin() ? 'Administrador' : 'Repartidor' }}</span>
+            </div>
+            @if (repartoService.comenzadoHoy() && !repartoService.terminadoHoy()) {
+            <span class="route-pill">En ruta</span>
+            }
+        </div>
+        }
+
+        <div class="settings-group">
+            <h3>Preferencias de aplicación</h3>
+            <div class="option-card">
+                <div class="option-row">
+                    <span class="option-icon"><i class="bi bi-moon-stars"></i></span>
+                    <span class="option-copy"><strong>Modo oscuro</strong><small>Ajusta el contraste para reparto nocturno</small></span>
+                    <button type="button" class="switch" [class.on]="themeService.tema() === 'dark'" (click)="toggleTheme()" role="switch"
+                        aria-label="Modo oscuro" [attr.aria-checked]="themeService.tema() === 'dark'">
+                        <span class="switch-thumb"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-group">
+            <h3>Gestión y logística</h3>
+            <div class="option-card">
+                <a routerLink="/barrios" class="option-row option-action" (click)="cerrar.emit()">
+                    <span class="option-icon"><i class="bi bi-geo-alt"></i></span>
+                    <span class="option-copy"><strong>Gestionar barrios</strong><small>Zonas asignadas y frecuencias</small></span>
+                    @if (totalBarrios() !== null) { <span class="count-pill">{{ totalBarrios() }} sectores</span> }
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="settings-group">
+            <h3>Cuenta y acceso</h3>
+            <div class="option-card">
+                @if (authService.esAdmin()) {
+                <a routerLink="/usuarios/nuevo" class="option-row option-action" (click)="cerrar.emit()">
+                    <span class="option-icon"><i class="bi bi-person-plus"></i></span>
+                    <span class="option-copy"><strong>Agregar usuario</strong><small>Crear acceso para el equipo</small></span>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+                }
+                <button type="button" class="option-row option-action" (click)="irAPassword()">
+                    <span class="option-icon"><i class="bi bi-key"></i></span>
+                    <span class="option-copy"><strong>Cambiar contraseña</strong><small>Actualizar credenciales de acceso</small></span>
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+                <button type="button" class="option-row option-action logout-row" (click)="logout()">
+                    <span class="option-icon"><i class="bi bi-box-arrow-right"></i></span>
+                    <span class="option-copy"><strong>Cerrar sesión</strong><small>Salir de esta cuenta</small></span>
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="sheet-footer"><span class="online-dot" [class.offline]="!enLinea()"></span> Sodería Móvil <span class="footer-separator">·</span> {{ enLinea() ? 'En línea' : 'Sin conexión' }}</div>
+    }
+
+    @if (vista() === 'password') {
+    <div class="sheet-body">
+        @if (exito()) {
+        <div class="success-message">
+            <i class="bi bi-check-circle"></i>
+            <p>Contraseña actualizada correctamente</p>
+            <button class="btn-primary-sheet" (click)="volverAlMenu()">Listo</button>
+        </div>
+        } @else {
+        <form (ngSubmit)="guardarPassword()" class="form-container">
+            <div class="form-section">
+                <div class="section-header">
+                    <span class="section-title">Actualizar contraseña</span>
+                </div>
+                <div class="grid-2">
+                    <div class="form-cell full-width password-cell">
+                        <label for="passwordActual">CONTRASEÑA ACTUAL *</label>
+                        <div class="password-input-group">
+                            <input id="passwordActual" [type]="verPassword() ? 'text' : 'password'" [(ngModel)]="passwordActual" name="passwordActual" autocomplete="current-password" />
+                            <button type="button" class="btn-toggle-password" (click)="togglePassword()" tabindex="-1">
+                                <i class="bi" [class.bi-eye]="!verPassword()" [class.bi-eye-slash]="verPassword()"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-cell password-cell">
+                        <label for="passwordNueva">NUEVA CONTRASEÑA *</label>
+                        <div class="password-input-group">
+                            <input id="passwordNueva" [type]="verPassword() ? 'text' : 'password'" [(ngModel)]="passwordNueva" name="passwordNueva" autocomplete="new-password" />
+                        </div>
+                    </div>
+
+                    <div class="form-cell password-cell">
+                        <label for="passwordConfirmar">CONFIRMAR NUEVA *</label>
+                        <div class="password-input-group">
+                            <input id="passwordConfirmar" [type]="verPassword() ? 'text' : 'password'" [(ngModel)]="passwordConfirmar" name="passwordConfirmar" autocomplete="new-password" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (error()) {
+            <div class="form-error">
+                <i class="bi bi-exclamation-circle"></i> {{ error() }}
+            </div>
+            }
+
+            <button type="submit" class="btn-primary-sheet" [disabled]="guardando()">
+                {{ guardando() ? 'Guardando...' : 'Guardar cambios' }}
+            </button>
+        </form>
+        }
+    </div>
+    }
+</div>

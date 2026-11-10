@@ -1,0 +1,83 @@
+<div class="page">
+    <header class="page-header">
+        <a [routerLink]="['/clientes', clienteId]" class="btn-icon" aria-label="Volver">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h1>Historial</h1>
+        <span class="btn-icon-spacer"></span>
+    </header>
+
+    @if (cargando()) {
+    <div class="state-message">
+        <div class="spinner"></div>
+    </div>
+    }
+
+    @if (error()) {
+    <div class="state-message error">
+        <i class="bi bi-exclamation-triangle"></i>
+        <p>{{ error() }}</p>
+    </div>
+    }
+
+    @if (!cargando() && entregas().length === 0 && !error()) {
+    <div class="state-message empty">
+        <i class="bi bi-clock-history"></i>
+        <p>Este cliente todavía no tiene entregas registradas</p>
+    </div>
+    }
+
+    @if (entregas().length > 0) {
+    <button class="btn-exportar" (click)="exportarExcel()">
+        <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
+    </button>
+
+    <div class="ledger-wrap">
+        <table class="ledger">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    @for (nombre of productosUnicos; track nombre) {
+                    <th class="num" [class]="claseColumna(nombre)">{{ nombre }}</th>
+                    }
+                    <th class="num">Total</th>
+                    <th class="num">Pagó</th>
+                    <th class="text-center">Método</th>
+                    <th class="num">Saldo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (h of entregas(); track h.id) {
+                <tr>
+                    <td>{{ h.fecha | date:'d MMM' }}</td>
+                    @for (nombre of productosUnicos; track nombre) {
+                    <td class="num" [class]="claseColumna(nombre)">
+                        {{ cantidadDeProducto(h, nombre) || '—' }}
+                    </td>
+                    }
+                    <td class="num">${{ h.importeTotal }}</td>
+                    <td class="num">${{ h.montoPagado }}</td>
+                    <td class="metodo-cell">
+                        <span class="metodo-badge" [class]="h.metodoPago || 'efectivo'">
+                            @if (h.metodoPago === 'transferencia') {
+                                <i class="bi bi-bank"></i> Transf.
+                            } @else if (h.metodoPago === 'mercadopago') {
+                                <i class="bi bi-qr-code-scan"></i> MP
+                            } @else {
+                                <i class="bi bi-cash"></i> Efectivo
+                            }
+                        </span>
+                    </td>
+                    <td class="num" [class.is-debt]="h.saldoFinal > 0" [class.is-credit]="h.saldoFinal < 0">${{
+                        h.saldoFinal }}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <p class="scroll-hint">
+        <i class="bi bi-arrow-left-right"></i> Deslizá para ver todas las columnas
+    </p>
+    }
+</div>

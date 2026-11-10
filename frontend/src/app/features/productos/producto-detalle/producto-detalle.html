@@ -1,0 +1,156 @@
+<div class="page">
+    <header class="page-header">
+        <a routerLink="/productos" class="btn-icon" aria-label="Volver">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h1>Producto</h1>
+        @if (!editando() && producto()) {
+        <button class="btn-icon" (click)="activarEdicion()" aria-label="Editar">
+            <i class="bi bi-pencil"></i>
+        </button>
+        } @else {
+        <span class="btn-icon-spacer"></span>
+        }
+    </header>
+
+    @if (cargando()) {
+    <div class="state-message">
+        <div class="spinner"></div>
+    </div>
+    }
+
+    @if (error() && !producto()) {
+    <div class="state-message error">
+        <i class="bi bi-exclamation-triangle"></i>
+        <p>{{ error() }}</p>
+    </div>
+    }
+
+    @if (producto(); as p) {
+    @if (!editando()) {
+    <div class="profile-card">
+        <div class="product-icon-lg">
+            <i class="bi" [class.bi-droplet-fill]="p.esRetornable" [class.bi-box-seam-fill]="!p.esRetornable"></i>
+        </div>
+        <h2 class="profile-name">{{ p.nombre }}</h2>
+        <div class="product-meta">
+            <span class="product-tag">{{ p.esRetornable ? 'Retornable' : 'No retornable' }}</span>
+            <span class="meta-separator">·</span>
+            <span>{{ p.esRetornable ? 'Envase retornable' : 'Producto de venta' }}</span>
+        </div>
+        <div class="stock-card">
+            <div class="stock-main">
+                <div class="stock-info">
+                    <span class="stock-label">Stock en depósito</span>
+                    <div class="stock-quantity">
+                        <span class="stock-value" [class.stock-bajo]="p.stockActual <= p.stockMinimo && p.stockMinimo > 0">{{ p.stockActual }}</span>
+                        <span class="stock-unit">u. disponibles</span>
+                    </div>
+                </div>
+                <div class="stock-buttons">
+                    <button type="button" class="btn-stock entrada" (click)="abrirMovimiento('entrada')">
+                        <i class="bi bi-plus-lg"></i> Entrada
+                    </button>
+                    <button type="button" class="btn-stock salida" (click)="abrirMovimiento('salida')">
+                        <i class="bi bi-dash-lg"></i> Salida
+                    </button>
+                </div>
+            </div>
+            <div class="stock-status" [class.low]="p.stockActual <= p.stockMinimo && p.stockMinimo > 0" [class.neutral]="p.stockMinimo === 0">
+                <span class="status-dot"></span>
+                {{ p.stockMinimo === 0 ? 'Sin mínimo configurado' : p.stockActual <= p.stockMinimo ? 'Stock bajo' : 'Stock saludable' }}
+                @if (p.stockMinimo > 0) { <span>(Mínimo: {{ p.stockMinimo }} u.)</span> }
+            </div>
+        </div>
+
+        @if (mostrarMovimiento()) {
+        <div class="movimiento-overlay" (click)="cerrarMovimiento()"></div>
+        <div class="movimiento-sheet">
+            <h3>{{ tipoMovimiento() === 'entrada' ? 'Registrar entrada' : 'Registrar salida' }}</h3>
+
+            <div class="form-group">
+                <label>Cantidad</label>
+                <input type="number" min="1" [(ngModel)]="cantidadMovimiento" name="cantidadMovimiento" />
+            </div>
+
+            <div class="form-group">
+                <label>Motivo {{ tipoMovimiento() === 'salida' ? '(obligatorio)' : '(opcional)' }}</label>
+                <input type="text" [(ngModel)]="motivoMovimiento" name="motivoMovimiento"
+                    [placeholder]="tipoMovimiento() === 'entrada' ? 'Ej: Recarga en planta' : 'Ej: Botella rota'" />
+            </div>
+
+            @if (errorMovimiento()) {
+            <div class="form-error">
+                <i class="bi bi-exclamation-circle"></i> {{ errorMovimiento() }}
+            </div>
+            }
+
+            <div class="form-actions">
+                <button class="btn-cancel" (click)="cerrarMovimiento()">Cancelar</button>
+                <button class="btn-save" [disabled]="guardandoMovimiento()" (click)="confirmarMovimiento()">
+                    {{ guardandoMovimiento() ? 'Guardando...' : 'Confirmar' }}
+                </button>
+            </div>
+        </div>
+        }
+    </div>
+
+    <div class="price-card">
+        <span class="price-icon"><i class="bi bi-tag-fill"></i></span>
+        <div class="price-info">
+            <span class="field-label">Precio venta</span>
+            <div class="price-line"><strong>{{ p | precioParticular }}</strong><span>/ unidad</span></div>
+        </div>
+        <span class="price-badge">Particular</span>
+    </div>
+
+    <div class="product-summary">
+        <div class="summary-card">
+            <span class="summary-icon"><i class="bi bi-box-seam"></i></span>
+            <div><span>Stock mínimo</span><strong>{{ p.stockMinimo }} u. en depósito</strong></div>
+        </div>
+        <div class="summary-card">
+            <span class="summary-icon blue"><i class="bi bi-check-circle"></i></span>
+            <div><span>Estado</span><strong>{{ p.activo ? 'Activo' : 'Inactivo' }}</strong></div>
+        </div>
+    </div>
+    }
+
+
+    @if (editando()) {
+    <form class="fields-card" (ngSubmit)="guardar()">
+        <div class="form-group">
+            <label for="nombre">Nombre del producto *</label>
+            <input id="nombre" type="text" [(ngModel)]="nombre" name="nombre" />
+        </div>
+        @if (authService.esAdmin()) {
+        <div class="form-group">
+            <label for="precioParticular">Precio *</label>
+            <input id="precioParticular" type="number" min="0" step="0.01" [(ngModel)]="precioParticular"
+                name="precioParticular" />
+        </div>
+        }
+        <div class="form-group">
+            <label for="stockMinimo">Alertar cuando el stock baje de</label>
+            <input id="stockMinimo" type="number" min="0" [(ngModel)]="stockMinimo" name="stockMinimo" />
+        </div>
+
+        @if (error()) {
+        <div class="form-error">
+            <i class="bi bi-exclamation-circle"></i> {{ error() }}
+        </div>
+        }
+
+        <div class="form-actions">
+            <button type="button" class="btn-cancel" (click)="cancelarEdicion()">Cancelar</button>
+            <button type="submit" class="btn-save" [disabled]="guardando()">
+                {{ guardando() ? 'Guardando...' : 'Guardar cambios' }}
+            </button>
+        </div>
+        <button type="button" class="btn-deactivate" (click)="desactivar()">
+            <i class="bi bi-trash"></i> Desactivar producto
+        </button>
+    </form>
+    }
+    }
+</div>

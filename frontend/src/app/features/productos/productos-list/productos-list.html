@@ -1,0 +1,74 @@
+<div class="page">
+    <header class="page-header">
+        <h1>Productos</h1>
+        <div class="header-actions">
+            <a routerLink="/productos/movimientos" class="btn-icon-header" aria-label="Ver movimientos">
+                <i class="bi bi-list-ul"></i>
+            </a>
+            @if (authService.esAdmin()) {
+            <a routerLink="/productos/nuevo" class="btn-add" aria-label="Nuevo producto">
+                <i class="bi bi-plus-lg"></i>
+            </a>
+            }
+        </div>
+    </header>
+
+    @if (productosStockBajo.length > 0) {
+    <div class="banner-stock">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>
+            Stock bajo en: {{ productosStockBajo.length === 1 ? productosStockBajo[0].nombre : productosStockBajo.length
+            + ' productos' }}
+        </span>
+    </div>
+    }
+
+    @if (cargando()) {
+    <div class="state-message">
+        <div class="spinner"></div>
+    </div>
+    }
+
+    @if (error()) {
+    <div class="state-message error">
+        <i class="bi bi-exclamation-triangle"></i>
+        <p>{{ error() }}</p>
+    </div>
+    }
+
+    @if (!cargando() && productos().length === 0 && !error()) {
+    <div class="state-message empty">
+        <i class="bi bi-box-seam"></i>
+        <p>No hay productos cargados</p>
+    </div>
+    }
+
+    <ul class="product-list">
+        @for (producto of productos(); track producto.id) {
+        <li class="product-card" [routerLink]="['/productos', producto.id]">
+            <div class="product-icon">
+                <i class="bi" [class.bi-droplet-fill]="producto.esRetornable"
+                    [class.bi-box-seam-fill]="!producto.esRetornable"></i>
+            </div>
+
+            <div class="product-info">
+                <span class="product-name">{{ producto.nombre }}</span>
+                <span class="product-tag">
+                    @if (producto.esRetornable) { Retornable · }
+                    Stock: {{ producto.stockActual }}
+                    @if (producto.stockActual <= producto.stockMinimo && producto.stockMinimo> 0) {
+                        <i class="bi bi-exclamation-triangle-fill stock-bajo-icon"></i>
+                        }
+                </span>
+            </div>
+
+            <div class="product-prices">
+                <div class="price-chip">
+                    <span class="price-label">Precio</span>
+                    <span class="price-value" [class.empty]="precioParticular(producto) === null">{{ precioParticular(producto) ?? '—' }}</span>
+                </div>
+            </div>
+        </li>
+        }
+    </ul>
+</div>

@@ -1,0 +1,105 @@
+:root {
+  --color-bg: #fdf8f3;
+  --color-surface: #ffffff;
+  --color-surface-raised: #fbeee3;
+  --color-primary: #f2632e;
+  --color-primary-dark: #c94a1c;
+  --color-ink: #241c14;
+  --color-muted: #7a6d61;
+  --color-debt: #dc2f2f;
+  --color-credit: #149a83;
+  --color-warning: #e8a531;
+  --color-border: #f0ddd0;
+}
+
+[data-theme='dark'] {
+  --color-bg: #171a1f;
+  --color-surface: #1f242b;
+  --color-surface-raised: #272d35;
+  --color-primary: #ff6a3d;
+  --color-primary-dark: #e2551f;
+  --color-ink: #f4f0ec;
+  --color-muted: #9aa7b0;
+  --color-debt: #ef4444;
+  --color-credit: #28cbb0;
+  --color-warning: #ffd166;
+  --color-border: #333b45;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+}
+
+body {
+  transition: background 0.2s ease;
+}
+
+/* Leaflet crea estos marcadores fuera del alcance de los estilos del componente. */
+app-ruta-mapa-modal .leaflet-marker-icon.marcador-inicio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #1abf7d;
+  color: white;
+  font-size: 1rem;
+  box-shadow: 0 0 0 3px white;
+}
+
+app-ruta-mapa-modal .leaflet-marker-icon.marcador-numerado {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: #d45122;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+  box-sizing: border-box;
+  box-shadow: 0 2px 7px rgba(36, 28, 20, 0.18);
+}
+
+app-ruta-mapa-modal .leaflet-marker-icon.marcador-destino {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: #11a76e;
+  color: white;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+  box-shadow: 0 2px 7px rgba(36, 28, 20, 0.18);
+}
+
+/* Los componentes de ruta quedan fuera del encapsulado CSS del shell.
+   Solo animamos opacidad para conservar la posición de sus elementos fijos. */
+@media (prefers-reduced-motion: no-preference) {
+  app-shell .shell-content > router-outlet + * {
+    display: block;
+    animation: shell-page-enter 180ms ease-out;
+  }
+}
+
+@keyframes shell-page-enter {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media print {
+
+  .navbar,
+  .bottom-nav {
+    display: none !important;
+  }
+
+  .shell-content {
+    padding-bottom: 0 !important;
+  }
+}

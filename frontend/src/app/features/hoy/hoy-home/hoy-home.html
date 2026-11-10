@@ -1,0 +1,241 @@
+<div class="page">
+    <header class="page-header">
+        <div>
+            <span class="fecha-texto">{{ fechaHoyTexto }}</span>
+            <h1>Hoy</h1>
+        </div>
+        @if (!cargando() && !error()) {
+        <div class="header-actions">
+            <button class="btn-header-action" [class.active]="incluirRestaurantes()" (click)="toggleRestaurantes()"
+                aria-label="Toggle restaurantes en lista de hoy">
+                <i class="bi bi-shop"></i> {{ incluirRestaurantes() ? '' : '+' }}
+            </button>
+            @if (paradasPendientes().length > 0) {
+            <button class="btn-header-action" (click)="abrirMapa()" aria-label="Ver mapa de ruta">
+                <i class="bi bi-map"></i> Ver mapa
+            </button>
+            }
+        </div>
+        }
+    </header>
+
+    @if (mostrarMapa()) {
+    <app-ruta-mapa-modal [clientes]="paradasPendientes()" (cerrar)="cerrarMapa()"></app-ruta-mapa-modal>
+    }
+
+    @if (cargando()) {
+    <div class="state-message">
+        <div class="spinner"></div>
+    </div>
+    }
+
+    @if (error()) {
+    <div class="state-message error">
+        <i class="bi bi-exclamation-triangle"></i>
+        <p>{{ error() }}</p>
+    </div>
+    }
+
+    @if (!cargando() && !error()) {
+    @if (repartoService.comenzadoHoy()) {
+    <label class="buscador">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input type="search" placeholder="Buscar dirección o cliente..." [value]="busqueda()"
+            (input)="busqueda.set($any($event.target).value)" aria-label="Buscar parada" />
+        @if (busqueda()) {
+        <button type="button" class="buscador-limpiar" (click)="busqueda.set('')" aria-label="Borrar búsqueda">
+            <i class="bi bi-x-circle-fill"></i>
+        </button>
+        }
+    </label>
+
+    }
+
+    <div class="resumen-fila">
+        @if (repartoService.comenzadoHoy() === false) {
+        <button type="button" class="tile tile-comenzar" (click)="comenzarReparto()">
+            <span class="tile-titulo"><i class="bi bi-truck" aria-hidden="true"></i> Comenzar reparto</span>
+            <span class="tile-sub">Arrancá el recorrido de hoy</span>
+            <i class="bi bi-arrow-right-circle-fill tile-flecha" aria-hidden="true"></i>
+        </button>
+        } @else if (repartoService.terminadoHoy()) {
+        <button type="button" class="tile tile-terminado" (click)="repartoService.abrirResumen()">
+            <span class="tile-titulo"><i class="bi bi-flag-fill" aria-hidden="true"></i> Terminado
+                <i class="bi bi-chevron-right tile-chevron" aria-hidden="true"></i></span>
+            <span class="tile-sub">Ver el resumen del día</span>
+        </button>
+        } @else {
+        <div class="tile tile-en-curso">
+            <span class="tile-titulo"><i class="bi bi-truck" aria-hidden="true"></i>
+                <span class="tile-nombre">Reparto en curso</span></span>
+            <span class="tile-sub">Las entregas salen del depósito</span>
+        </div>
+        }
+
+        <div class="tile tile-progreso">
+            <span class="tile-label">Progreso</span>
+            <span class="tile-sub"><strong class="tile-numero">{{ visitadasHoy() }}</strong> de {{ paradasHoy().length }}
+                paradas</span>
+            <div class="progreso-track">
+                <div class="progreso-fill" [style.width.%]="progresoPorcentaje()"></div>
+            </div>
+            <span class="tile-pie">
+                <span>{{ progresoPorcentaje() | number:'1.0-0' }}% completado</span>
+                <span>{{ paradasPendientes().length }} {{ paradasPendientes().length === 1 ? 'restante' : 'restantes' }}</span>
+            </span>
+        </div>
+    </div>
+
+    @if (repartoService.comenzadoHoy() && !repartoService.terminadoHoy()) {
+    <button type="button" class="btn-terminar-reparto" (click)="terminarReparto()"
+        [disabled]="paradasPendientes().length > 0 || terminando()">
+        <i class="bi bi-flag" aria-hidden="true"></i>
+        @if (terminando()) {
+        Terminando…
+        } @else if (paradasPendientes().length > 0) {
+        <span>Terminar reparto · <strong>te {{ paradasPendientes().length === 1 ? 'queda 1 parada' : 'quedan ' + paradasPendientes().length + ' paradas' }}</strong></span>
+        } @else {
+        Terminar reparto
+        }
+    </button>
+    }
+
+    @if (resumen(); as r) {
+    <div class="stats-grid">
+        <button type="button" class="stat-box stat-box-button" [class.active]="mostrarDetalleCobrado()"
+            [attr.aria-expanded]="mostrarDetalleCobrado()" aria-controls="detalle-cobrado"
+            (click)="toggleDetalleCobrado()">
+            <span class="stat-label">Cobrado <i class="bi"
+                    [class.bi-chevron-down]="!mostrarDetalleCobrado()"
+                    [class.bi-chevron-up]="mostrarDetalleCobrado()"></i></span>
+            <span class="stat-value">${{ r.cobrado | number:'1.0-0' }}</span>
+        </button>
+        <button type="button" class="stat-box stat-box-button" [class.active]="mostrarDetalleEntregados()"
+            [attr.aria-expanded]="mostrarDetalleEntregados()" aria-controls="detalle-entregados"
+            (click)="toggleDetalleEntregados()">
+            <span class="stat-label">Entregados <i class="bi"
+                    [class.bi-chevron-down]="!mostrarDetalleEntregados()"
+                    [class.bi-chevron-up]="mostrarDetalleEntregados()"></i></span>
+            <span class="stat-value">{{ r.entregados }}</span>
+        </button>
+        <div class="stat-box">
+            <span class="stat-label">Devueltos</span>
+            <span class="stat-value">{{ r.devueltos }}</span>
+        </div>
+    </div>
+    @if (mostrarDetalleCobrado()) {
+    <div id="detalle-cobrado" class="cobrado-detalle">
+        <div class="cobrado-item">
+            <span><i class="bi bi-cash"></i> Efectivo</span>
+            <strong>${{ r.cobradoPorMetodo.efectivo | number:'1.0-0' }}</strong>
+        </div>
+        <div class="cobrado-item">
+            <span><i class="bi bi-bank"></i> Transferencia</span>
+            <strong>${{ r.cobradoPorMetodo.transferencia | number:'1.0-0' }}</strong>
+        </div>
+        @if (r.cobradoPorMetodo.mercadopago > 0) {
+        <div class="cobrado-item">
+            <span><i class="bi bi-qr-code"></i> Mercado Pago</span>
+            <strong>${{ r.cobradoPorMetodo.mercadopago | number:'1.0-0' }}</strong>
+        </div>
+        }
+    </div>
+    }
+    @if (mostrarDetalleEntregados()) {
+    <div id="detalle-entregados" class="cobrado-detalle">
+        @for (producto of productosEntregados(); track producto.nombre) {
+        <div class="cobrado-item">
+            <span><i class="bi bi-droplet"></i> {{ producto.nombre }}</span>
+            <strong>{{ producto.cantidad }}</strong>
+        </div>
+        } @empty {
+        <p class="detalle-vacio">No se entregaron productos hoy.</p>
+        }
+    </div>
+    }
+    }
+
+    @if (repartoService.comenzadoHoy()) {
+    <div class="paradas-header">
+        <h2>Próximas paradas</h2>
+        <span class="paradas-count">{{ paradasPendientes().length }} pendientes</span>
+    </div>
+
+    @if (paradasHoy().length === 0) {
+    <div class="state-message empty">
+        <i class="bi bi-calendar-check"></i>
+        <p>Ningún barrio tiene reparto asignado para hoy</p>
+    </div>
+    } @else if (paradasPendientes().length === 0) {
+    <div class="state-message empty">
+        <i class="bi bi-check-circle"></i>
+        <p>¡Ya visitaste a todos los clientes de hoy!</p>
+    </div>
+    } @else if (pendientesFiltradas().length === 0) {
+    <div class="state-message empty">
+        <i class="bi bi-search"></i>
+        <p>Ninguna parada pendiente coincide con «{{ busqueda() }}»</p>
+    </div>
+    }
+
+    <div class="parada-list">
+        @for (c of pendientesFiltradas(); track c.id; let i = $index) {
+        <div class="parada-card">
+            <span class="parada-numero">{{ (i + 1).toString().padStart(2, '0') }}</span>
+
+            <div class="parada-info">
+                <a [routerLink]="['/clientes', c.id]" class="parada-nombre">{{ c.nombre }} {{ c.apellido }}</a>
+                <span class="parada-direccion">{{ c.direccion || 'Sin dirección' }}</span>
+                @if (c.saldoActual > 0) {
+                <span class="parada-deuda">Cobro pendiente: ${{ c.saldoActual | number:'1.0-0' }}</span>
+                }
+            </div>
+
+            <div class="parada-actions">
+                <a [routerLink]="['/clientes', c.id, 'entrega']" class="btn-entregar">Entregar</a>
+                <button type="button" class="btn-visitar" [disabled]="guardandoVisitaId() !== null"
+                    [attr.aria-label]="'Marcar visitado a ' + c.nombre + ' ' + c.apellido"
+                    [attr.aria-busy]="guardandoVisitaId() === c.id" (click)="marcarVisitado(c)">
+                    {{ guardandoVisitaId() === c.id ? 'Guardando…' : 'Marcar visitado' }}
+                </button>
+            </div>
+        </div>
+        }
+    </div>
+
+    <div class="paradas-header paradas-realizadas-header">
+        <h2>Paradas realizadas</h2>
+        <span class="paradas-count">{{ paradasRealizadas().length }} realizadas</span>
+    </div>
+
+    @if (paradasRealizadas().length === 0) {
+    <div class="state-message empty realizadas-empty">
+        <i class="bi bi-clock"></i>
+        <p>Todavía no hay paradas realizadas hoy</p>
+    </div>
+    } @else {
+    @if (realizadasFiltradas().length === 0) {
+    <div class="state-message empty realizadas-empty">
+        <i class="bi bi-search"></i>
+        <p>Ninguna parada realizada coincide con «{{ busqueda() }}»</p>
+    </div>
+    }
+    <div class="parada-list">
+        @for (c of realizadasFiltradas(); track c.id) {
+        <div class="parada-card parada-realizada">
+            <span class="parada-numero realizada-check" aria-hidden="true">
+                <i class="bi bi-check-circle-fill"></i>
+            </span>
+
+            <div class="parada-info">
+                <a [routerLink]="['/clientes', c.id]" class="parada-nombre">{{ c.nombre }} {{ c.apellido }}</a>
+                <span class="parada-direccion">{{ c.direccion || 'Sin dirección' }}</span>
+                <span class="parada-estado">Visitado hoy</span>
+            </div>
+        </div>
+        }
+    </div>
+    }
+    }
+    }
+</div>

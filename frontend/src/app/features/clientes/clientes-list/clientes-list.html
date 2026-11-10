@@ -1,0 +1,200 @@
+<div class="page">
+    <header class="page-header">
+        <div>
+            <span class="overline">{{ viendoArchivados() ? 'Clientes dados de baja' : 'Cartera de clientes' }}</span>
+            <h1>{{ viendoArchivados() ? 'Archivados' : 'Clientes' }}</h1>
+        </div>
+        <div class="header-actions">
+            @if (!viendoArchivados()) {
+            <a routerLink="/clientes/nuevo" class="btn-add" aria-label="Nuevo cliente">
+                <i class="bi bi-plus-lg"></i>
+            </a>
+            }
+            <button type="button" class="btn-pill" (click)="toggleArchivados()">
+                <i class="bi" [class.bi-archive]="!viendoArchivados()" [class.bi-people]="viendoArchivados()"></i>
+                {{ viendoArchivados() ? 'Activos' : 'Archivados' }}
+            </button>
+        </div>
+    </header>
+
+    <div class="search-bar" role="search">
+        <i class="bi bi-search"></i>
+        <input type="search" aria-label="Buscar cliente" placeholder="Buscar por nombre, dirección o teléfono..."
+            [value]="busqueda()" (input)="onBusqueda($any($event.target).value)" />
+        @if (!viendoArchivados()) {
+        <button type="button" class="btn-filtros" [class.active]="mostrarFiltros() || filtrosAvanzadosActivos()"
+            (click)="mostrarFiltros.set(!mostrarFiltros())" aria-label="Más filtros"
+            [attr.aria-expanded]="mostrarFiltros()">
+            <i class="bi bi-sliders"></i>
+            @if (filtrosAvanzadosActivos()) { <span class="punto" aria-hidden="true"></span> }
+        </button>
+        }
+    </div>
+
+    @if (mostrarFiltros() && !viendoArchivados()) {
+    <div class="panel-filtros">
+        <span class="panel-titulo">Día de reparto</span>
+        <div class="chips">
+            <button type="button" class="chip chip-chico" [class.active]="dia() === ''" (click)="cambiarDia('')">Todos</button>
+            @for (d of dias; track d.valor) {
+            <button type="button" class="chip chip-chico" [class.active]="dia() === d.valor"
+                (click)="cambiarDia(d.valor)">{{ d.etiqueta.slice(0, 3) }}</button>
+            }
+        </div>
+        <label class="opcion">
+            <input type="checkbox" [checked]="soloComerciales()" (change)="toggleComerciales()" />
+            Solo comerciales
+        </label>
+        <label class="opcion">
+            <input type="checkbox" [checked]="soloDeudaVieja()" (change)="toggleDeudaVieja()" />
+            Deuda de más de 30 días sin pagar ({{ deudaVieja().length }})
+        </label>
+        @if (filtrosAvanzadosActivos()) {
+        <button type="button" class="btn-limpiar" (click)="limpiarFiltros()">Quitar filtros</button>
+        }
+    </div>
+    }
+
+    @if (!viendoArchivados()) {
+    <div class="chips chips-scroll">
+        <button type="button" class="chip" [class.active]="filtro() === 'todos'" (click)="cambiarFiltro('todos')">
+            Todos <span class="contador">{{ conteos().todos }}</span></button>
+        <button type="button" class="chip" [class.active]="filtro() === 'deuda'" (click)="cambiarFiltro('deuda')">
+            Con deuda <span class="contador">{{ conteos().deuda }}</span></button>
+        <button type="button" class="chip" [class.active]="filtro() === 'ruta'" (click)="cambiarFiltro('ruta')">
+            Hoy en ruta <span class="contador">{{ conteos().ruta }}</span></button>
+        <button type="button" class="chip" [class.active]="filtro() === 'frecuentes'" (click)="cambiarFiltro('frecuentes')">
+            Frecuentes <span class="contador">{{ conteos().frecuentes }}</span></button>
+    </div>
+
+    <div class="kpis">
+        <div class="kpi">
+            <span class="kpi-icono"><i class="bi bi-people"></i></span>
+            <span class="kpi-texto">
+                <span class="kpi-label">Activos mes</span>
+                <strong>{{ activosMes() ?? '—' }} clientes</strong>
+            </span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-icono"><i class="bi bi-currency-dollar"></i></span>
+            <span class="kpi-texto">
+                <span class="kpi-label">Saldo pendiente</span>
+                <strong>${{ saldoPendiente() | number:'1.0-0' }}</strong>
+            </span>
+        </div>
+    </div>
+    }
+
+    @if (cargando()) {
+    <div class="state-message">
+        <div class="spinner"></div>
+    </div>
+    }
+
+    @if (error()) {
+    <div class="state-message error">
+        <i class="bi bi-exclamation-triangle"></i>
+        <p>{{ error() }}</p>
+    </div>
+    }
+
+    @if (!cargando() && clientesFiltrados().length === 0 && !error()) {
+    <div class="state-message empty">
+        <i class="bi bi-people"></i>
+        <p>{{ viendoArchivados() ? 'No hay clientes archivados' : 'No hay clientes para mostrar' }}</p>
+    </div>
+    }
+
+    <ul class="client-list">
+        @for (cliente of clientesMostrados(); track cliente.id) {
+        <li class="client-card" [class.archived]="viendoArchivados()"
+            (click)="!viendoArchivados() && irADetalle(cliente.id)">
+            <div class="card-top">
+                <span class="avatar" [class.avatar-deuda]="cliente.saldoActual > 0">{{ iniciales(cliente) }}</span>
+                <div class="client-info">
+                    <span class="client-name">
+                        <span class="nombre">{{ cliente.nombre }} {{ cliente.apellido }}</span>
+                        @if (!viendoArchivados() && etiqueta(cliente); as e) {
+                        <span [class]="'etiqueta etiqueta-' + e.tipo">{{ e.texto }}</span>
+                        }
+                    </span>
+                    <span class="client-address">
+                        <i class="bi bi-geo-alt"></i>
+                        {{ cliente.direccion || 'Sin dirección registrada' }}
+                    </span>
+                </div>
+                @if (!viendoArchivados()) {
+                <!-- Menú de opciones: pendiente de definir. -->
+                <button type="button" class="btn-mas" aria-label="Más opciones" title="Próximamente"
+                    (click)="detener($event)">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                }
+            </div>
+
+            <div class="card-bottom">
+                <div class="card-datos">
+                    @if (viendoArchivados()) {
+                    <span class="dato">Dado de baja</span>
+                    } @else {
+                    @if (cliente.saldoActual > 0) {
+                    <span class="pill-deuda">Deuda: ${{ cliente.saldoActual | number:'1.0-0' }}</span>
+                    }
+                    <span class="dato">{{ ultimaEntrega(cliente) }}</span>
+                    }
+                </div>
+
+                <div class="card-acciones">
+                    @if (cliente.telefono && !viendoArchivados()) {
+                    <a [href]="'tel:' + cliente.telefono" class="btn-call" aria-label="Llamar"
+                        (click)="detener($event)">
+                        <i class="bi bi-telephone"></i>
+                    </a>
+                    }
+                    @if (viendoArchivados()) {
+                    <button type="button" class="btn-accion" (click)="restaurarCliente($event, cliente)"
+                        [disabled]="restaurandoId() !== null">
+                        {{ restaurandoId() === cliente.id ? 'Restaurando…' : 'Restaurar' }}
+                    </button>
+                    } @else {
+                    @switch (accion(cliente)) {
+                    @case ('entregar') {
+                    <button type="button" class="btn-accion primario" (click)="ejecutarAccion($event, cliente)">Entregar</button>
+                    }
+                    @case ('cobrar') {
+                    <button type="button" class="btn-accion" (click)="ejecutarAccion($event, cliente)">Cobrar</button>
+                    }
+                    @default {
+                    <button type="button" class="btn-accion" (click)="ejecutarAccion($event, cliente)">Detalle</button>
+                    }
+                    }
+                    }
+                </div>
+            </div>
+        </li>
+        }
+    </ul>
+
+    @if (!cargando() && cantidadRestante() > 0) {
+    <button class="btn-load-more" (click)="verMas()">
+        Ver más ({{ cantidadRestante() }} restantes)
+    </button>
+    }
+
+    <div class="print-only">
+        <ol>
+            @for (cliente of clientesFiltrados(); track cliente.id) {
+            <li>
+                <strong>{{ cliente.apellido }}, {{ cliente.nombre }}</strong><br>
+                {{ cliente.direccion || 'Sin dirección registrada' }}
+                @if (cliente.telefono) {<br>{{ cliente.telefono }}}
+            </li>
+            }
+        </ol>
+    </div>
+</div>
+
+@if (clienteACobrar(); as c) {
+<app-pago-modal [clienteId]="c.id" [nombreCliente]="c.nombre + ' ' + c.apellido" [saldoActual]="c.saldoActual"
+    (cerrar)="clienteACobrar.set(null)" (pagoRegistrado)="onPagoRegistrado()"></app-pago-modal>
+}

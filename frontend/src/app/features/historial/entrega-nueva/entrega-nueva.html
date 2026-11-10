@@ -1,0 +1,248 @@
+<div class="page">
+    <header class="page-header">
+        <a [routerLink]="['/clientes', cliente()?.id]" class="btn-icon" aria-label="Volver">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h1>Nueva entrega</h1>
+        <span class="btn-icon-spacer"></span>
+    </header>
+
+    @if (cargando()) {
+    <div class="state-message">
+        <div class="spinner"></div>
+    </div>
+    }
+
+    @if (error() && !cliente()) {
+    <div class="state-message error">
+        <i class="bi bi-exclamation-triangle"></i>
+        <p>{{ error() }}</p>
+    </div>
+    }
+
+    @if (cliente(); as c) {
+    <div class="client-banner">
+
+        <div class="avatar">{{ c.nombre.charAt(0) }}{{ c.apellido.charAt(0) }}</div>
+        <div>
+            <span class="client-name">{{ c.nombre }} {{ c.apellido }}</span>
+            <span class="client-balance">
+                Saldo registrado: <strong>${{ saldoRegistrado() | number:'1.0-2' }}</strong>
+            </span>
+        </div>
+    </div>
+    <div class="ajuste-saldo">
+        @if (!editandoSaldo()) {
+        <button type="button" class="btn-deuda-anterior" (click)="iniciarAjusteSaldo()"
+            [disabled]="guardando() || verificandoStock() || mostrandoQR()">
+            <span class="deuda-icon" aria-hidden="true">
+                <i class="bi bi-wallet2"></i>
+            </span>
+            <span class="deuda-action-copy">
+                <strong>Deuda anterior</strong>
+                <small>Cargar saldo previo</small>
+            </span>
+            <i class="bi bi-chevron-right deuda-action-arrow" aria-hidden="true"></i>
+        </button>
+        } @else {
+        <fieldset class="deuda-form" [disabled]="guardando() || verificandoStock() || mostrandoQR()">
+            <legend>
+                <span class="deuda-icon" aria-hidden="true"><i class="bi bi-wallet2"></i></span>
+                <span>Deuda anterior</span>
+            </legend>
+            <p id="ayudaSaldo">Reemplaza el saldo registrado y se guarda al confirmar.</p>
+
+            <label class="deuda-field deuda-field-monto" for="nuevoSaldoAnterior">
+                <span>Nuevo saldo</span>
+                <span class="deuda-money-input">
+                    <span aria-hidden="true">$</span>
+                    <input id="nuevoSaldoAnterior" type="number" min="0" max="99999999.99" step="0.01"
+                        inputmode="decimal" aria-describedby="ayudaSaldo" [ngModel]="nuevoSaldoAnterior()"
+                        (ngModelChange)="nuevoSaldoAnterior.set($event)" />
+                </span>
+            </label>
+
+            <label class="deuda-field" for="motivoAjuste">
+                <span>Motivo</span>
+                <input id="motivoAjuste" type="text" maxlength="255" [(ngModel)]="motivoAjuste" />
+            </label>
+
+            <button type="button" class="btn-cancelar-deuda" (click)="cancelarAjusteSaldo()">
+                <i class="bi bi-x"></i> Cancelar
+            </button>
+        </fieldset>
+        }
+    </div>
+    <div class="lines-list">
+        @for (linea of lineas(); track linea.productoId) {
+        <div class="line-card" [class.active]="linea.cantidadEntregada > 0">
+            <div class="line-header">
+                <span class="line-name">{{ linea.nombre }} · Stock: {{ linea.stockActual }}</span>
+                <div class="price-input">
+                    <span>$</span>
+                    <input type="number" min="0" step="0.01" [ngModel]="linea.precioUnitario"
+                        (ngModelChange)="actualizarPrecio(linea, $event)" />
+                </div>
+            </div>
+
+            <div class="line-controls">
+                <div class="stepper">
+                    <button type="button" (click)="restar(linea)" aria-label="Restar">
+                        <i class="bi bi-dash"></i>
+                    </button>
+                    <span class="stepper-value">{{ linea.cantidadEntregada }}</span>
+                    <button type="button" (click)="sumar(linea)"
+                        [disabled]="linea.cantidadEntregada >= linea.stockActual"
+                        [attr.aria-label]="linea.cantidadEntregada >= linea.stockActual ? 'Sin stock disponible' : 'Sumar'">
+                        <i class="bi bi-plus"></i>
+                    </button>
+                </div>
+
+                <div class="stepper stepper-envases">
+                    <button type="button" (click)="restarEnvase(linea)" [disabled]="linea.cantidadEnvaseDevuelto === 0"
+                        aria-label="Restar envase">
+                        <i class="bi bi-dash"></i>
+                    </button>
+                    <div class="stepper-envase-label">
+                        <span class="stepper-value">{{ linea.cantidadEnvaseDevuelto }}</span>
+                        <span class="stepper-caption">envases</span>
+                    </div>
+                    <button type="button" (click)="sumarEnvase(linea)" aria-label="Sumar envase">
+                        <i class="bi bi-plus"></i>
+                    </button>
+                </div>
+                @if (superaEsperado(linea)) {
+                <div class="line-warning">
+                    <i class="bi bi-info-circle"></i> Más de lo esperado según el sistema
+                </div>
+                }
+            </div>
+        </div>
+        }
+    </div>
+
+    <div class="cobro-card">
+        <h3 class="cobro-title">Cobro</h3>
+
+        <!-- Fila 1: Métodos de Pago -->
+        <div class="metodo-chips">
+            <button type="button" class="metodo-chip" [class.active]="metodoPago() === 'efectivo'"
+                (click)="metodoPago.set('efectivo')">
+                Efectivo
+            </button>
+            <button type="button" class="metodo-chip" [class.active]="metodoPago() === 'transferencia'"
+                (click)="metodoPago.set('transferencia')">
+                Transferencia
+            </button>
+            @if (mpHabilitado()) {
+            <button type="button" class="metodo-chip" [class.active]="metodoPago() === 'mercadopago'"
+                (click)="metodoPago.set('mercadopago')">
+                QR
+            </button>
+            }
+        </div>
+
+        <!-- Fila 2: Opciones de Monto -->
+        <div class="pago-opciones">
+            <button type="button" class="pago-opcion-card" [class.active]="opcionPago() === 'todo'"
+                (click)="seleccionarOpcionPago('todo')">
+                <span class="pago-opcion-title">Paga todo</span>
+                <span class="pago-opcion-sub">${{ importeTotal() | number:'1.0-0' }}</span>
+            </button>
+
+            <button type="button" class="pago-opcion-card" [class.active]="opcionPago() === 'nada'"
+                (click)="seleccionarOpcionPago('nada')">
+                <span class="pago-opcion-title">No paga</span>
+                <span class="pago-opcion-sub">$0</span>
+            </button>
+
+            <button type="button" class="pago-opcion-card" [class.active]="opcionPago() === 'otro'"
+                (click)="seleccionarOpcionPago('otro')">
+                <span class="pago-opcion-title">Otro</span>
+                <span class="pago-opcion-sub">${{ (opcionPago() === 'otro' ? montoPersonalizado() : importeTotal()) |
+                    number:'1.0-0' }}</span>
+            </button>
+        </div>
+
+        <!-- Input personalizado para "Otro" -->
+        @if (opcionPago() === 'otro') {
+        <div class="custom-monto-box">
+            <label for="montoCustomInput">Monto a cobrar</label>
+            <div class="custom-monto-input">
+                <span>$</span>
+                <input id="montoCustomInput" type="number" min="0" step="0.01" [ngModel]="montoPersonalizado()"
+                    (ngModelChange)="actualizarMontoPersonalizado($event)" placeholder="0" autofocus />
+            </div>
+        </div>
+        }
+
+        <!-- Agregar observación -->
+        @if (!mostrarObservacion()) {
+        <button type="button" class="btn-add-observacion" (click)="mostrarObservacion.set(true)">
+            <i class="bi bi-plus"></i> Agregar observación
+        </button>
+        } @else {
+        <div class="observacion-box">
+            <label for="observacion">Observación</label>
+            <input id="observacion" type="text" [(ngModel)]="observacion" name="observacion"
+                placeholder="Escribí una observación..." />
+        </div>
+        }
+    </div>
+
+    @if (error()) {
+    <div class="form-error">
+        <i class="bi bi-exclamation-circle"></i> {{ error() }}
+    </div>
+    }
+    }
+
+    <!-- Barra de resumen fija, siempre visible al fondo -->
+    @if (cliente()) {
+    <div class="summary-bar">
+        <div class="summary-grid">
+            <div class="summary-col">
+                <span class="summary-col-label">ENTREGA</span>
+                <span class="summary-col-value">${{ importeTotal() | number:'1.0-0' }}</span>
+            </div>
+            <div class="summary-col">
+                <span class="summary-col-label">PAGA</span>
+                <span class="summary-col-value">${{ montoPagado() | number:'1.0-0' }}</span>
+            </div>
+        </div>
+
+        <div class="summary-middle-row">
+            <span class="summary-middle-label">SALDO FINAL</span>
+            <span class="summary-middle-value" [class.is-debt]="saldoFinal() > 0" [class.is-credit]="saldoFinal() < 0">
+                {{ saldoFinal() > 0 ? '-$' : (saldoFinal() < 0 ? '+$' : '$' ) }}{{ (saldoFinal() < 0 ? -saldoFinal() :
+                    saldoFinal()) | number:'1.0-0' }} </span>
+        </div>
+
+        <button class="btn-confirm" (click)="metodoPago() === 'mercadopago' ? generarQR() : confirmar()"
+            [disabled]="guardando() || verificandoStock()">
+            <span class="btn-confirm-text">
+                {{ verificandoStock() ? 'Verificando stock...' : (metodoPago() === 'mercadopago' ? 'Generar QR de cobro'
+                : (guardando() ? 'Registrando...' : 'Confirmar entrega')) }}
+            </span>
+            <span class="btn-confirm-meta">
+                {{ totalUnidades() }} u. · ${{ importeTotal() | number:'1.0-0' }}
+            </span>
+        </button>
+    </div>
+    }
+</div>
+
+@if (mostrandoQR()) {
+<div class="qr-overlay" (click)="cancelarQR()"></div>
+<div class="qr-sheet">
+    <h3>Escaneá para pagar</h3>
+    <p class="qr-monto">${{ importeTotal() }}</p>
+    @if (qrImagenUrl()) {
+    <img [src]="qrImagenUrl()" alt="QR de pago" class="qr-imagen" />
+    }
+    <p class="qr-esperando">
+        <span class="spinner-chico"></span> Esperando confirmación del pago...
+    </p>
+    <button class="btn-cancel" (click)="cancelarQR()">Cancelar</button>
+</div>
+}

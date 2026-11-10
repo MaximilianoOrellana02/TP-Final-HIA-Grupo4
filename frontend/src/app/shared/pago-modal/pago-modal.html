@@ -1,0 +1,68 @@
+<div class="backdrop" (click)="cerrar.emit()"></div>
+
+<div class="sheet">
+    <div class="sheet-handle"></div>
+
+    <div class="sheet-header">
+        <div class="sheet-heading">
+            <span class="sheet-icon" aria-hidden="true"><i class="bi bi-cash-coin"></i></span>
+            <div>
+                <h2>Registrar pago</h2>
+                <p>{{ nombreCliente() }}</p>
+            </div>
+        </div>
+        <button type="button" class="btn-close" (click)="cerrar.emit()" aria-label="Cerrar">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+
+    <div class="saldo-card">
+        <div>
+            <span>Saldo actual</span>
+            <strong>${{ saldoActual().toLocaleString('es-AR') }}</strong>
+        </div>
+        @if (saldoActual() > 0) {
+        <button type="button" (click)="monto = saldoActual()">Usar total</button>
+        }
+    </div>
+
+    <div class="monto-group">
+        <label for="montoPago">Monto pagado</label>
+        <div class="monto-input">
+            <span aria-hidden="true">$</span>
+            <input id="montoPago" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0"
+                [(ngModel)]="monto" name="monto" />
+        </div>
+    </div>
+
+    <span class="section-label">Método de pago</span>
+    <div class="metodo-chips">
+        <button type="button" class="metodo-chip" [class.active]="metodoPago() === 'efectivo'"
+            (click)="metodoPago.set('efectivo')">
+            <i class="bi bi-cash"></i> Efectivo
+        </button>
+        <button type="button" class="metodo-chip" [class.active]="metodoPago() === 'transferencia'"
+            (click)="metodoPago.set('transferencia')">
+            <i class="bi bi-bank"></i> Transferencia
+        </button>
+    </div>
+
+    <div class="observacion-group">
+        <label for="observacionPago">Observación <span>Opcional</span></label>
+        <input id="observacionPago" type="text" [(ngModel)]="observacion" name="observacion"
+            placeholder="Ej: Pagó en el local" />
+    </div>
+
+    @if (error()) {
+    <div class="form-error">
+        <i class="bi bi-exclamation-circle"></i> {{ error() }}
+    </div>
+    }
+
+    <button type="button" class="btn-confirmar" [disabled]="guardando()" (click)="confirmar()">
+        <span>{{ guardando() ? 'Registrando...' : 'Confirmar pago' }}</span>
+        @if (!guardando() && monto > 0) {
+        <strong>${{ monto.toLocaleString('es-AR') }}</strong>
+        }
+    </button>
+</div>

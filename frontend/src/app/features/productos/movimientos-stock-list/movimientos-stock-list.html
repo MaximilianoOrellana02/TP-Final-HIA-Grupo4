@@ -1,0 +1,85 @@
+<div class="page">
+    <header class="page-header">
+        <a routerLink="/productos" class="btn-icon" aria-label="Volver">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h1>Movimientos de stock</h1>
+        <span class="btn-icon-spacer"></span>
+    </header>
+
+    <div class="periodo-selector date-selector">
+        <select [(ngModel)]="mesSeleccionado" (change)="cambiarMesAnio()" [disabled]="verTodos()" aria-label="Mes">
+            @for (m of meses; track m.valor) {
+            <option [ngValue]="m.valor">{{ m.etiqueta }}</option>
+            }
+        </select>
+        <select [(ngModel)]="anioSeleccionado" (change)="cambiarMesAnio()" [disabled]="verTodos()" aria-label="Año">
+            @for (a of anios; track a) {
+            <option [ngValue]="a">{{ a }}</option>
+            }
+        </select>
+        <button type="button" class="chip period-all" [class.active]="verTodos()" (click)="toggleVerTodos()">Todos</button>
+    </div>
+
+    <div class="filter-chips">
+        <button type="button" class="chip" [class.active]="filtro() === 'todos'" (click)="cambiarFiltro('todos')">Todos los
+            tipos</button>
+        <button type="button" class="chip" [class.active]="filtro() === 'entrada'"
+            (click)="cambiarFiltro('entrada')">Entradas</button>
+        <button type="button" class="chip" [class.active]="filtro() === 'salida'" (click)="cambiarFiltro('salida')">Salidas</button>
+    </div>
+
+    @if (movimientos().length > 0) {
+    <button type="button" class="btn-exportar" (click)="exportarExcel()" [disabled]="exportando()">
+        <i class="bi bi-file-earmark-excel"></i>
+        {{ exportando() ? 'Generando...' : 'Exportar a Excel' }}
+    </button>
+    }
+
+    @if (cargando()) {
+    <div class="state-message">
+        <div class="spinner"></div>
+    </div>
+    }
+
+    @if (error()) {
+    <div class="state-message error">
+        <i class="bi bi-exclamation-triangle"></i>
+        <p>{{ error() }}</p>
+    </div>
+    }
+
+    @if (!cargando() && movimientos().length === 0 && !error()) {
+    <div class="state-message empty">
+        <i class="bi bi-box-seam"></i>
+        <p>No hay movimientos en este período</p>
+    </div>
+    }
+
+    @if (!cargando()) {
+    <ul class="movimiento-list">
+        @for (m of movimientos(); track m.id) {
+        <li class="movimiento-card" [class.is-entrada]="m.tipo === 'entrada'" [class.is-salida]="m.tipo === 'salida'">
+            <div class="movimiento-icon">
+                <i class="bi" [class.bi-arrow-down]="m.tipo === 'entrada'"
+                    [class.bi-arrow-up]="m.tipo === 'salida'"></i>
+            </div>
+
+            <div class="movimiento-info">
+                <span class="movimiento-producto">{{ m.producto?.nombre }}</span>
+                <span class="movimiento-meta">
+                    {{ formatearFecha(m.fecha) }} · {{ m.usuario?.nombreCompleto }}
+                </span>
+                @if (m.motivo) {
+                <span class="movimiento-motivo">{{ m.motivo }}</span>
+                }
+            </div>
+
+            <div class="movimiento-cantidad">
+                {{ m.tipo === 'entrada' ? '+' : '−' }}{{ m.cantidad }}
+            </div>
+        </li>
+        }
+    </ul>
+    }
+</div>

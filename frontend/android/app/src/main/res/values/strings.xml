@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">soderia-frontend</string>
+    <string name="title_activity_main">soderia-frontend</string>
+    <string name="package_name">com.soderia.app</string>
+    <string name="custom_url_scheme">com.soderia.app</string>
+</resources>
