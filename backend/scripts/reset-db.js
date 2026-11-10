@@ -15,12 +15,8 @@ const sequelize = require('../dist/config/database').default;
 (async () => {
     const qi = sequelize.getQueryInterface();
     const tablas = await qi.showAllTables();
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
-    try {
-        for (const tabla of tablas) await qi.dropTable(tabla);
-    } finally {
-        await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
-    }
+    // Borra el esquema completo (tablas y tipos ENUM) y lo vuelve a crear vacio.
+    await sequelize.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
     const restantes = await qi.showAllTables();
     console.log('Tablas eliminadas: ' + tablas.length + ' | restantes: ' + restantes.length);
     await sequelize.close();

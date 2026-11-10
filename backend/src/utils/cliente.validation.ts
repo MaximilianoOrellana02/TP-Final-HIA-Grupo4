@@ -8,8 +8,7 @@ export function esUuid(value: unknown): value is string {
     return typeof value === 'string' && validator.isUUID(value);
 }
 
-// Validador para modelos Sequelize: acepta cualquier version de UUID. Los usuarios sembrados con UUID() de MySQL
-// son version 1, asi que isUUID: 4 los rechazaba.
+// Validador para modelos Sequelize: acepta cualquier version de UUID (no solo la 4).
 export function uuidDeModelo(value: unknown) {
     if (!esUuid(value)) throw new Error('Debe ser un UUID');
 }

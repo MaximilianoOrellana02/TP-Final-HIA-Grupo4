@@ -6,7 +6,7 @@ Aplicación web para gestionar el reparto de una sodería: clientes por barrio, 
 
 | Carpeta | Contenido |
 |---|---|
-| `backend/` | API REST en Node.js + Express + TypeScript, con Sequelize y MySQL |
+| `backend/` | API REST en Node.js + Express + TypeScript, con Sequelize y PostgreSQL |
 | `frontend/` | Aplicación Angular servida por nginx |
 | `docker-compose.yml` | Levanta la base de datos, el backend y el frontend |
 
@@ -35,7 +35,7 @@ El script muestra por consola las contraseñas generadas.
 
 | Servicio | Imagen | Puerto expuesto |
 |---|---|---|
-| `db` | MySQL 8.4 | ninguno (solo red interna) |
+| `db` | PostgreSQL 17 | ninguno (solo red interna) |
 | `backend` | Node 22 | ninguno (se accede por el frontend en `/api`) |
 | `frontend` | nginx | `8080` |
 

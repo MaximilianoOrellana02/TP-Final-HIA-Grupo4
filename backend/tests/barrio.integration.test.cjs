@@ -18,7 +18,6 @@ const Barrio = require('../dist/models/Barrio').default;
 const Cliente = require('../dist/models/Cliente').default;
 const Usuario = require('../dist/models/Usuario').default;
 const { crearSesion } = require('../dist/services/token.service');
-const migration = require('../migrations/20260908020000-harden-barrios');
 let created = false, server, base, token, barrio;
 const absentId = '11111111-1111-4111-8111-111111111111';
 const uniqueName = () => 'Barrio ' + randomBytes(8).toString('hex');
@@ -34,11 +33,6 @@ async function request(url, method = 'GET', body, auth = true) {
     return { status: response.status, body: response.status === 204 ? null : await response.json() };
 }
 const url = () => '/barrios/' + barrio.id;
-async function rawBarrio(nombre, diasVisita = []) {
-    const id = randomUUID();
-    await db.query('INSERT INTO barrios (id,nombre,diasVisita,createdAt,updatedAt) VALUES (:id,:nombre,:dias,NOW(),NOW())', { replacements: { id, nombre, dias: JSON.stringify(diasVisita) } });
-    return id;
-}
 before(async () => {
     assertScratch(); await adminDb.getQueryInterface().createDatabase(databaseName); created = true;
     const directory = path.join(__dirname, '../migrations');
@@ -184,30 +178,4 @@ test('listing sorts names and returns consistent arrays', async () => {
     const result = await request('/barrios'); assert.equal(result.status, 200);
     assert.deepEqual(result.body.filter(b => b.nombre.startsWith(prefix)).map(b => b.nombre), [prefix + ' A', prefix + ' B']);
     assert.ok(result.body.every(b => Array.isArray(b.diasVisita)));
-});
-test('migration can be retried, rolled back and reapplied with existing associations', async () => {
-    const qi = db.getQueryInterface();
-    await migration.up(qi); await migration.down(qi); await migration.up(qi);
-    const [rules] = await db.query("SELECT DELETE_RULE AS accion FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'clientes' AND REFERENCED_TABLE_NAME = 'barrios'");
-    assert.equal(rules[0].accion, 'RESTRICT');
-});
-test('migration normalizes legacy names without losing visit days', async () => {
-    const nombre = uniqueName(); const id = await rawBarrio(' ' + nombre + ' ', ['miercoles']);
-    await migration.up(db.getQueryInterface());
-    const saved = await Barrio.findByPk(id); assert.equal(saved.nombre, nombre); assert.deepEqual(saved.diasVisita, ['miercoles']);
-});
-test('migration refuses invalid legacy data before normalizing any rows', async () => {
-    const nombre = ' ' + uniqueName() + ' '; const good = await rawBarrio(nombre);
-    const invalid = await rawBarrio(uniqueName(), { lunes: true });
-    try {
-        await assert.rejects(migration.up(db.getQueryInterface()), /invalidos/);
-        assert.equal((await Barrio.findByPk(good)).nombre, nombre);
-    } finally { await Barrio.destroy({ where: { id: [good, invalid] } }); }
-});
-test('migration rolls back name normalization on duplicate collisions', async () => {
-    const collision = await rawBarrio(' ' + barrio.nombre);
-    try {
-        await assert.rejects(migration.up(db.getQueryInterface()), { name: 'SequelizeUniqueConstraintError' });
-        assert.equal((await Barrio.findByPk(collision)).nombre, ' ' + barrio.nombre);
-    } finally { await Barrio.destroy({ where: { id: collision } }); }
 });

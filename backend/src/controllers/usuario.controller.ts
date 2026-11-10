@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Op, literal } from "sequelize";
+import { Op, col, fn, literal, where } from "sequelize";
 import bcrypt from "bcrypt";
 import { randomBytes } from "node:crypto";
 import Usuario from "../models/Usuario";
@@ -36,6 +36,11 @@ function datosPublicos(usuario: Usuario) {
   };
 }
 
+// El username no distingue mayusculas: "Admin" y "admin" son el mismo usuario (hay un indice unico sobre LOWER).
+function mismoUsername(username: string) {
+  return where(fn("LOWER", col("username")), username.toLowerCase());
+}
+
 export async function registrar(req: Request, res: Response) {
   const body = cuerpo(req);
   const username = texto(body.username, 50);
@@ -54,7 +59,7 @@ export async function registrar(req: Request, res: Response) {
     return res.status(400).json({ error: passwordError });
   try {
     const existente = await Usuario.findOne({
-      where: { [Op.or]: [{ username }, { email }] },
+      where: { [Op.or]: [mismoUsername(username), { email }] },
     });
     if (existente)
       return res
@@ -80,7 +85,7 @@ export async function login(req: Request, res: Response) {
   if (!username || !passwordLoginValida(body.password))
     return res.status(400).json({ error: "Username o contrasena invalidos" });
   try {
-    const usuario = await Usuario.findOne({ where: { username } });
+    const usuario = await Usuario.findOne({ where: mismoUsername(username) });
     const valida = await bcrypt.compare(
       body.password,
       usuario ? usuario.passwordHash : await dummyHash,
@@ -160,7 +165,7 @@ export async function restablecerPassword(req: Request, res: Response) {
     const [updated] = await Usuario.update(
       {
         passwordHash,
-        sessionVersion: literal("sessionVersion + 1"),
+        sessionVersion: literal('"sessionVersion" + 1'),
         resetTokenHash: null,
         resetTokenExpiresAt: null,
       },
@@ -218,7 +223,7 @@ export async function cambiarPassword(req: AuthRequest, res: Response) {
     const [updated] = await Usuario.update(
       {
         passwordHash,
-        sessionVersion: literal("sessionVersion + 1"),
+        sessionVersion: literal('"sessionVersion" + 1'),
         resetTokenHash: null,
         resetTokenExpiresAt: null,
       },

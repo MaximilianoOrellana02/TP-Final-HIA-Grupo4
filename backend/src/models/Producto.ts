@@ -16,7 +16,7 @@ interface ProductoAttributes {
 interface ProductoCreationAttributes
     extends Optional<ProductoAttributes, 'id' | 'esRetornable' | 'activo' | 'stockActual' | 'stockMinimo'> { }
 
-// Precio actual del producto para un tipo de cliente. MySQL devuelve DECIMAL como texto; la API lo expone como numero.
+// Precio actual del producto para un tipo de cliente. La base devuelve DECIMAL como texto; la API lo expone como numero.
 function columnaPrecio(campo: 'precioParticular' | 'precioConfianza') {
     return {
         type: DataTypes.DECIMAL(10, 2),

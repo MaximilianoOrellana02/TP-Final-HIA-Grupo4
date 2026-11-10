@@ -23,7 +23,7 @@
 ## Pruebas
 
 - `npm test`: pruebas unitarias de Usuario y Cliente, incluyendo validacion, modelo, fecha comercial y geocodificacion simulada.
-- `npm run test:integration`: pruebas HTTP y MySQL de ambos modulos, incluyendo migraciones, relaciones, bajas y concurrencia.
+- `npm run test:integration`: pruebas HTTP y PostgreSQL de ambos modulos, incluyendo relaciones, bajas y concurrencia.
 - La suite de Cliente crea una base `soderia_cliente_test_<hex>` usando la conexion de `config/config.js` y la elimina al terminar. Requiere permisos CREATE/DROP DATABASE y no modifica la base real.
 - Geocodificacion y correo se simulan. No se envian direcciones a servicios externos ni correos durante las pruebas.
 

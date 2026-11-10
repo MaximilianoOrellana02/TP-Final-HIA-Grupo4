@@ -30,7 +30,7 @@ interface HistorialCreationAttributes extends Optional<
   "id" | "fecha" | "observacion" | "metodoPago" | "ajusteSaldo"
 > {}
 
-// MySQL devuelve DECIMAL como texto; la API siempre expone los importes como numero.
+// La base devuelve DECIMAL como texto; la API siempre expone los importes como numero.
 function decimal(campo: keyof HistorialAttributes, extra: object = {}) {
   return {
     type: DataTypes.DECIMAL(10, 2),

@@ -18,7 +18,6 @@ const Producto = require('../dist/models/Producto').default;
 const MovimientoStock = require('../dist/models/MovimientoStock').default;
 const Usuario = require('../dist/models/Usuario').default;
 const { crearSesion } = require('../dist/services/token.service');
-const migration = require('../migrations/20260908030000-harden-stock');
 let created = false, server, base, token, producto;
 const absentId = '11111111-1111-4111-8111-111111111111';
 const uniqueName = () => 'Producto ' + randomBytes(8).toString('hex');
@@ -104,15 +103,4 @@ test('database connection failures return 503 and query failures 500', async t =
     assert.equal((await request('/stock/movimientos')).status, 503);
     finder.mock.mockImplementation(async () => { throw new Error('query error'); });
     assert.equal((await request('/stock/movimientos')).status, 500);
-});
-test('migration is idempotent, reversible and leaves indexes plus a database default for fecha', async () => {
-    const qi = db.getQueryInterface();
-    await migration.up(qi); await migration.down(qi); await migration.up(qi);
-    const names = (await qi.showIndex('movimientos_stock')).map(i => i.name);
-    assert.ok(names.includes('movimientos_stock_producto_fecha')); assert.ok(names.includes('movimientos_stock_fecha'));
-    await db.query('INSERT INTO movimientos_stock (id, productoId, usuarioId, tipo, cantidad, createdAt, updatedAt) VALUES (UUID(), :p, :u, "entrada", 1, NOW(), NOW())', {
-        replacements: { p: producto.id, u: (await Usuario.findOne()).id },
-    });
-    const saved = await MovimientoStock.findOne({ where: { productoId: producto.id } });
-    assert.ok(saved.fecha instanceof Date && !Number.isNaN(saved.fecha.getTime()));
 });

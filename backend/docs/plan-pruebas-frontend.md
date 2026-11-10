@@ -128,20 +128,19 @@ Precondicion: bidon con stock 10 y precio particular 1650 / confianza 1300; pack
 ## 5. Errores y bordes transversales
 
 - **X1.** Apagar el backend y hacer cualquier accion -> toast "Sin conexion con el servidor" (status 0).
-- **X2.** Apagar MySQL con el backend prendido y listar productos -> 503 -> la app muestra "Ocurrio un error en el servidor" (el interceptor trata 503 como 5xx).
+- **X2.** Apagar PostgreSQL con el backend prendido y listar productos -> 503 -> la app muestra "Ocurrio un error en el servidor" (el interceptor trata 503 como 5xx).
 - **X3.** Un 400 o 409 en pantallas con mensaje generico (desajuste F3) -> el motivo real esta en Network > Response.
 - **X4.** Dos pestañas: en una desactivar un producto, en la otra intentar cambiarle el precio -> 409.
 - **X5.** Dos pestañas: registrar a la vez dos entregas que superan el stock -> una 201 y la otra 409; el stock nunca queda negativo.
 - **X6.** Ids en la URL que no son UUID (`/clientes/abc`, `/productos/abc`) -> la app muestra su pantalla de error o "no encontrado"; en Network es 400.
 
-## 6. Verificacion en base de datos (opcional, MySQL)
+## 6. Verificacion en base de datos (opcional, PostgreSQL)
 
 ```sql
-SELECT nombre, stockActual FROM productos;
-SELECT c.nombre, c.saldoActual, s.cantidad envases FROM clientes c LEFT JOIN saldos_envase s ON s.clienteId = c.id;
-SELECT fecha, importeTotal, montoPagado, saldoFinal, metodoPago FROM historiales ORDER BY fecha DESC;
+SELECT nombre, "stockActual" FROM productos;
+SELECT c.nombre, c."saldoActual", s.cantidad envases FROM clientes c LEFT JOIN saldos_envase s ON s."clienteId" = c.id;
+SELECT fecha, "importeTotal", "montoPagado", "saldoFinal", "metodoPago" FROM historiales ORDER BY fecha DESC;
 SELECT tipo, cantidad, motivo, fecha FROM movimientos_stock ORDER BY fecha DESC;
-SELECT estado, detalle FROM pedidos;
 ```
 
 Ningun stock ni cantidad debe ser negativo; `saldos_envase.cantidad` puede ser negativo solo si el cliente devolvio mas envases de los que se le entregaron.

@@ -67,7 +67,7 @@ Usuario.init(
             set(value: string) { this.setDataValue('email', typeof value === 'string' ? value.trim().toLowerCase() : value); },
             validate: { isEmail: true, len: [1, 150] },
         },
-        sessionVersion: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 0 },
+        sessionVersion: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
         resetTokenHash: { type: DataTypes.STRING(64), allowNull: true, defaultValue: null, unique: true },
         resetTokenExpiresAt: { type: DataTypes.DATE, allowNull: true, defaultValue: null },
         rol: {

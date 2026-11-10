@@ -32,11 +32,11 @@ Ejecutar `npm run db:migrate` antes de iniciar la version actualizada. La migrac
 
 ## Pruebas
 
-- `npm test`: compilacion y pruebas unitarias, sin conexion a MySQL ni SMTP.
-- `npm run test:integration`: compilacion y pruebas HTTP con MySQL real. Usa la conexion de `config/config.js`, crea una base aleatoria `soderia_test_<hex>` y la elimina al finalizar. Requiere permisos CREATE/DROP DATABASE. No modifica la base configurada de la aplicacion.
+- `npm test`: compilacion y pruebas unitarias, sin conexion a la base ni SMTP.
+- `npm run test:integration`: compilacion y pruebas HTTP con PostgreSQL real. Usa la conexion de `config/config.js`, crea una base aleatoria `soderia_test_<hex>` y la elimina al finalizar. Requiere permisos CREATE/DROP DATABASE. No modifica la base configurada de la aplicacion.
 - Las pruebas de integracion ejecutan las migraciones, comprueban restricciones SQL y solicitudes concurrentes, y verifican el rollback y reaplicacion de la migracion de autenticacion.
 - SMTP esta simulado, incluyendo errores de envio. Las pruebas no envian correos ni confirman la entrega de Gmail.
 
-Configuracion requerida: conexion MySQL, `JWT_SECRET`, `FRONTEND_URL_RESET`, `GMAIL_USER` y `GMAIL_APP_PASSWORD` para envio real. No se incluyen credenciales en las pruebas ni en sus salidas.
+Configuracion requerida: conexion PostgreSQL, `JWT_SECRET`, `FRONTEND_URL_RESET`, `GMAIL_USER` y `GMAIL_APP_PASSWORD` para envio real. No se incluyen credenciales en las pruebas ni en sus salidas.
 
 Referencia de configuracion del limitador: https://express-rate-limit.mintlify.app/reference/configuration

@@ -17,7 +17,6 @@ require('../dist/models/associations');
 const Producto = require('../dist/models/Producto').default;
 const Usuario = require('../dist/models/Usuario').default;
 const { crearSesion } = require('../dist/services/token.service');
-const migration = require('../migrations/20261110020000-precios-en-productos');
 let created = false, server, base, token, tokenRepartidor;
 const absentId = '11111111-1111-4111-8111-111111111111';
 const uniqueName = () => 'Producto ' + randomBytes(8).toString('hex');
@@ -166,16 +165,4 @@ test('database connection failures return 503 and query failures 500', async t =
     assert.equal((await request('/productos')).status, 503);
     finder.mock.mockImplementation(async () => { throw new Error('query error'); });
     assert.equal((await request('/productos')).status, 500);
-});
-test('the precios-en-productos migration copies the newest price of each type and is reversible', async () => {
-    const qi = db.getQueryInterface();
-    const producto = await crear({ precioParticular: 100, precioConfianza: 90 });
-    await migration.down(qi, Sequelize);
-    // down deja un precio por tipo; se agrega uno mas nuevo para particular, que es el que debe quedar.
-    await db.query('INSERT INTO precios_producto (id, productoId, tipoCliente, precio, fechaDesde, createdAt, updatedAt) VALUES (:id, :p, "particular", 150, "2030-01-01 00:00:00.000", NOW(), NOW())', {
-        replacements: { id: randomUUID(), p: producto.id },
-    });
-    await migration.up(qi, Sequelize);
-    assert.deepEqual(preciosDe(await Producto.findByPk(producto.id)), { particular: 150, confianza: 90 });
-    assert.equal((await qi.showAllTables()).includes('precios_producto'), false);
 });

@@ -24,7 +24,6 @@ const SaldoEnvase = require('../dist/models/SaldoEnvase').default;
 const Producto = require('../dist/models/Producto').default;
 const { crearSesion } = require('../dist/services/token.service');
 const { fechaComercial } = require('../dist/utils/fecha-comercial');
-const migration = require('../migrations/20260908010000-clientes-baja-logica');
 let created = false, server, base, user, token, cliente;
 
 function assertScratch() {
@@ -63,15 +62,6 @@ after(async () => {
     await db.close();
     try { if (created) { assertScratch(); await adminDb.getQueryInterface().dropDatabase(databaseName); } }
     finally { await adminDb.close(); }
-});
-
-test('migration can be retried and reversed before any client is archived', async () => {
-    const qi = db.getQueryInterface();
-    await migration.up(qi, Sequelize);
-    await migration.down(qi);
-    assert.equal((await qi.describeTable('clientes')).deletedAt, undefined);
-    await migration.up(qi, Sequelize);
-    assert.equal((await qi.describeTable('clientes')).deletedAt.allowNull, true);
 });
 
 test('all client routes require authentication', async () => {
@@ -241,7 +231,6 @@ test('soft deletion preserves settled history and zero container records', async
     assert.equal((await request(clientUrl(), 'DELETE')).status, 404);
     const histories = await request('/historial?limit=100');
     assert.equal(histories.body.data.find(h => h.id === history.id).cliente.id, cliente.id);
-    await assert.rejects(migration.down(db.getQueryInterface()), /dados de baja/);
 });
 
 test('archived clients cannot receive new deliveries', async () => {

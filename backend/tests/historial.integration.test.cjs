@@ -23,7 +23,6 @@ const Cliente = require('../dist/models/Cliente').default;
 const Usuario = require('../dist/models/Usuario').default;
 const { crearSesion } = require('../dist/services/token.service');
 const { fechaComercial } = require('../dist/utils/fecha-comercial');
-const migration = require('../migrations/20260908060000-harden-historial');
 let created = false, server, base, token, user, cliente, producto;
 const absentId = '11111111-1111-4111-8111-111111111111';
 const hex = () => randomBytes(4).toString('hex');
@@ -199,28 +198,6 @@ test('database connection failures return 503 and query failures 500', async t =
     finder.mock.mockImplementation(async () => { throw new Error('query error'); });
     assert.equal((await request('/historial')).status, 500);
 });
-test('migration is idempotent, reversible, trims observations, adds indexes and a fecha default, and rejects negatives', async () => {
-    const qi = db.getQueryInterface();
-    const fields = { clienteId: cliente.id, usuarioId: user.id, saldoAnterior: 0, importeTotal: 10, montoPagado: 0, saldoFinal: 10 };
-    const conEspacios = await Historial.create({ ...fields, observacion: 'x' });
-    await db.query('UPDATE historiales SET observacion = "  nota  " WHERE id = :id', { replacements: { id: conEspacios.id } });
-    await migration.up(qi); await migration.down(qi); await migration.up(qi);
-    const names = (await qi.showIndex('historiales')).map(i => i.name);
-    assert.ok(names.includes('historiales_fecha')); assert.ok(names.includes('historiales_cliente_fecha'));
-    assert.match((await qi.describeTable('historiales')).fecha.type, /^DATETIME\(3\)$/i);
-    await conEspacios.reload(); assert.equal(conEspacios.observacion, 'nota');
-    const sinFecha = randomUUID();
-    await db.query('INSERT INTO historiales (id, clienteId, usuarioId, saldoAnterior, importeTotal, montoPagado, saldoFinal, createdAt, updatedAt) VALUES (:id, :c, :u, 0, 0, 0, 0, NOW(), NOW())', { replacements: { id: sinFecha, c: cliente.id, u: user.id } });
-    const saved = await Historial.findByPk(sinFecha); assert.ok(saved.fecha instanceof Date && !Number.isNaN(saved.fecha.getTime()));
-    await db.query('UPDATE historiales SET montoPagado = -1 WHERE id = :id', { replacements: { id: sinFecha } });
-    await assert.rejects(migration.up(qi), /pagos negativos/);
-    await db.query('UPDATE historiales SET montoPagado = 0 WHERE id = :id', { replacements: { id: sinFecha } });
-    await db.query('INSERT INTO historial_detalles (id, historialId, productoId, cantidadEntregada, cantidadEnvaseDevuelto, precioUnitario, importe) VALUES (:id, :h, :p, -1, 0, 1, 1)', { replacements: { id: randomUUID(), h: sinFecha, p: producto.id } });
-    await assert.rejects(migration.up(qi), /historial_detalles/);
-    await db.query('DELETE FROM historial_detalles WHERE historialId = :h', { replacements: { h: sinFecha } });
-    await migration.up(qi);
-});
-
 test('prior debt is audited with the delivery and does not inflate sales or payments', async () => {
     const beforeSummary = (await request('/historial/resumen')).body;
     const ajusteSaldo = { saldoEsperado: 0, saldoNuevo: 15000, motivo: 'Deuda anterior al sistema' };
@@ -278,18 +255,4 @@ test('invalid adjustments and overflowing final balances leave the delivery unch
         assert.equal((await request('/historial', 'POST', entrega({ ajusteSaldo }))).status, 400);
     }
     assert.deepEqual(await estado(), before);
-});
-
-test('adjustment migration preserves previous deliveries and supports rollback', async () => {
-    const qi = db.getQueryInterface();
-    const ajusteMigration = require('../migrations/20260910000000-add-ajuste-saldo-historial');
-    const result = await request('/historial', 'POST', entrega());
-    assert.equal(result.status, 201);
-    assert.equal(result.body.historial.ajusteSaldo, null);
-    await ajusteMigration.down(qi);
-    await ajusteMigration.up(qi, Sequelize);
-    await ajusteMigration.up(qi, Sequelize);
-    const previous = await Historial.findByPk(result.body.historial.id);
-    assert.equal(previous.ajusteSaldo, null);
-    assert.equal(previous.saldoFinal, 200);
 });

@@ -26,7 +26,6 @@ process.env.FRONTEND_URL_RESET = 'http://example.invalid';
 const Usuario = require('../dist/models/Usuario').default;
 const { crearUsuarioRouter } = require('../dist/routes/usuario.routes');
 const { crearSesion, hashRecuperacion } = require('../dist/services/token.service');
-const authMigration = require('../migrations/20260908000000-harden-usuarios-auth');
 let created = false, server, base, user, access, fixtureHash;
 const registration = { username: 'new-user', nombreCompleto: 'New User', email: 'new@example.com', password: 'initial123' };
 
@@ -53,17 +52,13 @@ before(async () => {
     await adminDb.getQueryInterface().createDatabase(databaseName);
     created = true;
     const qi = db.getQueryInterface();
-    await require('../migrations/20260708223742-create-usuarios').up(qi, Sequelize);
-    await require('../migrations/20260729044244-add-email-usuarios').up(qi, Sequelize);
-    await authMigration.up(qi, Sequelize);
-    // Columna rol de add-camioneta-y-rol-columns: esa migracion necesita tablas que este test no crea.
-    await qi.addColumn('usuarios', 'rol', { type: Sequelize.ENUM('admin', 'repartidor'), allowNull: false, defaultValue: 'repartidor' });
+    await require('../migrations/20261110100000-esquema-inicial').up(qi, Sequelize);
     fixtureHash = await bcrypt.hash('initial123', 10);
 });
 
 beforeEach(async () => {
     assertScratchDatabase();
-    await Usuario.destroy({ where: {}, truncate: true });
+    await Usuario.destroy({ where: {}, truncate: true, cascade: true });
     mails = []; mailFails = false;
     user = await Usuario.create({ username: 'fixture', nombreCompleto: 'Fixture', email: 'fixture@example.com', passwordHash: fixtureHash, rol: 'admin' });
     access = crearSesion(user);
@@ -154,7 +149,7 @@ test('concurrent duplicate email registrations create exactly one account', asyn
     assert.equal(await Usuario.count({ where: { email: registration.email } }), 1);
 });
 
-test('MySQL enforces email nonnull and uniqueness even without model validation', async () => {
+test('the database enforces email nonnull and uniqueness even without model validation', async () => {
     const fields = { username: 'direct', nombreCompleto: 'Direct', passwordHash: fixtureHash };
     await assert.rejects(Usuario.create({ ...fields, email: null }, { validate: false }));
     await assert.rejects(Usuario.create({ ...fields, email: user.email }, { validate: false }), { name: 'SequelizeUniqueConstraintError' });
@@ -207,7 +202,7 @@ test('reset succeeds once, revokes old sessions, and permits login with new pass
     assert.equal(user.sessionVersion, 1);
 });
 
-test('concurrent reset requests consume the link exactly once in MySQL', async () => {
+test('concurrent reset requests consume the link exactly once in the database', async () => {
     const token = await recovery();
     const results = await Promise.all([
         request('/restablecer', { token, passwordNueva: 'changed123' }),
@@ -275,15 +270,3 @@ for (const [path, limit, method] of [['/login', 15, 'POST'], ['/recuperar', 5, '
         assert.ok(Number(blocked.retryAfter) > 0);
     });
 }
-
-test('authentication migration can be retried, rolled back and reapplied', async () => {
-    const qi = db.getQueryInterface();
-    await authMigration.up(qi, Sequelize);
-    await authMigration.down(qi, Sequelize);
-    assert.equal((await qi.describeTable('usuarios')).email.allowNull, true);
-    await authMigration.up(qi, Sequelize);
-    const columns = await qi.describeTable('usuarios');
-    assert.equal(columns.email.allowNull, false);
-    assert.ok(columns.sessionVersion);
-    assert.ok((await qi.showIndex('usuarios')).some(index => index.name === 'usuarios_email_unique' && index.unique));
-});

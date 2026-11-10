@@ -1,13 +1,9 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
-import fs from 'fs';
-import path from 'path';
 
 dotenv.config();
 
-const usarSSL = process.env.DB_SSL === 'true';
-const rutaCertificado = path.join(process.cwd(), 'src', 'config', 'aiven-ca.pem');
-
+// Conexión a PostgreSQL con las variables DB_* (en Docker las define docker-compose.yml).
 const sequelize = new Sequelize(
     process.env.DB_NAME as string,
     process.env.DB_USER as string,
@@ -15,16 +11,8 @@ const sequelize = new Sequelize(
     {
         host: process.env.DB_HOST,
         port: Number(process.env.DB_PORT),
-        dialect: 'mysql',
+        dialect: 'postgres',
         logging: false,
-        dialectOptions: usarSSL
-            ? {
-                ssl: {
-                    ca: fs.readFileSync(rutaCertificado).toString(),
-                    rejectUnauthorized: false,
-                },
-            }
-            : {},
     }
 );
 

@@ -1,7 +1,7 @@
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { Sequelize } = require('sequelize');
-const db = new Sequelize('unit', 'unit', 'unit', { dialect: 'mysql', logging: false });
+const db = new Sequelize('unit', 'unit', 'unit', { dialect: 'postgres', logging: false });
 const databasePath = require.resolve('../dist/config/database');
 require.cache[databasePath] = { id: databasePath, filename: databasePath, loaded: true, exports: { __esModule: true, default: db } };
 const Barrio = require('../dist/models/Barrio').default;

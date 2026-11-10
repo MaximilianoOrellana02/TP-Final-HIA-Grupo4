@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const { Sequelize } = require('sequelize');
 
 process.env.JWT_SECRET = 'usuario-unit-tests-only';
-const db = new Sequelize('unit', 'unit', 'unit', { dialect: 'mysql', logging: false });
+const db = new Sequelize('unit', 'unit', 'unit', { dialect: 'postgres', logging: false });
 const databasePath = require.resolve('../dist/config/database');
 require.cache[databasePath] = { id: databasePath, filename: databasePath, loaded: true, exports: { __esModule: true, default: db } };
 const Usuario = require('../dist/models/Usuario').default;
@@ -87,14 +87,5 @@ test('model normalizes fields and enforces email and name validation', async () 
     assert.equal(user.email, 'test@example.com');
     for (const invalid of [{ username: '  ' }, { username: 'x'.repeat(51) }, { nombreCompleto: ' ' }, { nombreCompleto: 'x'.repeat(101) }, { email: null }, { email: 'invalid' }]) {
         await assert.rejects(Usuario.build({ ...data, ...invalid }).validate());
-    }
-});
-
-test('migration refuses missing or duplicate emails before changing schema', async () => {
-    const migration = require('../migrations/20260908000000-harden-usuarios-auth');
-    for (const counts of [[1, 0], [0, 1]]) {
-        let queries = 0;
-        const qi = { sequelize: { query: async () => [[{ total: counts[queries++] }]] }, describeTable: () => assert.fail('schema must not change') };
-        await assert.rejects(migration.up(qi, Sequelize), /emails vacios o duplicados/);
     }
 });

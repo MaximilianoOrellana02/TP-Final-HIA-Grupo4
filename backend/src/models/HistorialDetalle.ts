@@ -17,7 +17,7 @@ interface HistorialDetalleAttributes {
 interface HistorialDetalleCreationAttributes
     extends Optional<HistorialDetalleAttributes, 'id' | 'cantidadEnvaseDevuelto'> { }
 
-// MySQL devuelve DECIMAL como texto; la API siempre expone los importes como numero.
+// La base devuelve DECIMAL como texto; la API siempre expone los importes como numero.
 function decimal(campo: keyof HistorialDetalleAttributes) {
     return {
         type: DataTypes.DECIMAL(10, 2),

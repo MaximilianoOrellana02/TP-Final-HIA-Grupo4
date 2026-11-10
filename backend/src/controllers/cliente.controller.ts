@@ -243,13 +243,13 @@ export async function listarDeudaVieja(req: AuthRequest, res: Response) {
     const dias = validarDias(req.query.dias);
     const resultados = await sequelize.query<DeudaCliente>(
       `
-            SELECT c.id, c.nombre, c.apellido, c.saldoActual,
-                MAX(CASE WHEN h.montoPagado > 0 THEN h.fecha END) AS ultimoPago,
-                MIN(h.fecha) AS primeraEntrega
+            SELECT c.id, c.nombre, c.apellido, c."saldoActual",
+                MAX(CASE WHEN h."montoPagado" > 0 THEN h.fecha END) AS "ultimoPago",
+                MIN(h.fecha) AS "primeraEntrega"
             FROM clientes c
-            LEFT JOIN historiales h ON h.clienteId = c.id
-            WHERE c.saldoActual > 0 AND c.deletedAt IS NULL
-            GROUP BY c.id, c.nombre, c.apellido, c.saldoActual
+            LEFT JOIN historiales h ON h."clienteId" = c.id
+            WHERE c."saldoActual" > 0 AND c."deletedAt" IS NULL
+            GROUP BY c.id, c.nombre, c.apellido, c."saldoActual"
         `,
       { type: QueryTypes.SELECT },
     );
@@ -296,17 +296,17 @@ export async function actividadClientes(req: AuthRequest, res: Response) {
     const hace30Dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const filas = await sequelize.query<ActividadFila>(
       `
-            SELECT h.clienteId,
-                MAX(h.fecha) AS ultimaEntrega,
-                SUM(CASE WHEN h.fecha >= :hace30Dias THEN 1 ELSE 0 END) AS entregasUltimos30,
-                MAX(CASE WHEN h.fecha >= :inicioMes THEN 1 ELSE 0 END) AS activoMes
+            SELECT h."clienteId",
+                MAX(h.fecha) AS "ultimaEntrega",
+                SUM(CASE WHEN h.fecha >= :hace30Dias THEN 1 ELSE 0 END) AS "entregasUltimos30",
+                MAX(CASE WHEN h.fecha >= :inicioMes THEN 1 ELSE 0 END) AS "activoMes"
             FROM historiales h
-            JOIN clientes c ON c.id = h.clienteId AND c.deletedAt IS NULL
+            JOIN clientes c ON c.id = h."clienteId" AND c."deletedAt" IS NULL
             WHERE EXISTS (
                 SELECT 1 FROM historial_detalles d
-                WHERE d.historialId = h.id AND d.cantidadEntregada > 0
+                WHERE d."historialId" = h.id AND d."cantidadEntregada" > 0
             )
-            GROUP BY h.clienteId
+            GROUP BY h."clienteId"
         `,
       { type: QueryTypes.SELECT, replacements: { hace30Dias, inicioMes } },
     );
