@@ -39,6 +39,24 @@ El script muestra por consola las contraseñas generadas.
 | `backend` | Node 22 | ninguno (se accede por el frontend en `/api`) |
 | `frontend` | nginx | `8080` |
 
+## Backup y restauración de PostgreSQL
+
+Para generar una copia bajo demanda, ejecutá desde la raíz del proyecto:
+
+```bash
+docker compose run --rm backup
+```
+
+El servicio imprime la ruta del archivo `.dump` y lo conserva en el volumen `pg_backups`.
+
+Para probar la restauración, reemplazá `NOMBRE_DEL_ARCHIVO.dump` por el nombre que imprimió el servicio y usá un nombre de base nuevo en cada prueba:
+
+```bash
+docker compose run --rm backup 'createdb --maintenance-db=postgres soderia_restore && pg_restore --single-transaction --dbname=soderia_restore /backups/NOMBRE_DEL_ARCHIVO.dump'
+```
+
+Desde pgAdmin, actualizá la lista de bases y compará los datos de `clientes` e `historiales` entre la base original y la restaurada.
+
 ## Modelo de datos
 
 9 tablas: `usuarios`, `clientes`, `barrios`, `productos`, `historiales` (entregas), `historial_detalles`, `saldos_envase`, `movimientos_stock` y `repartos`.
