@@ -70,6 +70,61 @@ services:
       db:
         condition: service_healthy
 
+  mantis-db:
+    image: mariadb@sha256:0e4bb0f339feba125d1154fbacd36c16ec8518f52e44e1f82ecec7d6771caf39
+    profiles: [incidencias]
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MANTIS_DB_ROOT_PASSWORD:-}
+      MARIADB_DATABASE: bugtracker
+      MARIADB_USER: mantisbt
+      MARIADB_PASSWORD: ${MANTIS_DB_PASSWORD:-}
+    volumes:
+      - mantis_db_data:/var/lib/mysql
+    networks:
+      - interna
+    healthcheck:
+      test: [CMD, healthcheck.sh, --connect, --innodb_initialized]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  mantisbt:
+    image: xlrl/mantisbt@sha256:89bc1bc55fd18698dd6acee8742b503942614b2ac322fb91fd8a62f157fa94cd
+    profiles: [incidencias]
+    restart: unless-stopped
+    environment:
+      MANTIS_DB_PASSWORD: ${MANTIS_DB_PASSWORD:-}
+      MANTIS_CRYPTO_SALT: ${MANTIS_CRYPTO_SALT:-}
+      MANTIS_BASE_URL: http://localhost:${MANTIS_PORT:-8989}/
+      MANTIS_ENABLE_ADMIN: ${MANTIS_ENABLE_ADMIN:-0}
+      MANTIS_SMTP_HOST: ${MANTIS_SMTP_HOST:-mantis-correo}
+      MANTIS_SMTP_PORT: ${MANTIS_SMTP_PORT:-1025}
+      MANTIS_SMTP_CONNECTION_MODE: ${MANTIS_SMTP_CONNECTION_MODE:-}
+      MANTIS_SMTP_USER: ${MANTIS_SMTP_USER:-}
+      MANTIS_SMTP_PASSWORD: ${MANTIS_SMTP_PASSWORD:-}
+      MANTIS_FROM_EMAIL: ${MANTIS_FROM_EMAIL:-mantis@example.invalid}
+    ports:
+      - "127.0.0.1:${MANTIS_PORT:-8989}:80"
+    volumes:
+      - ./mantis/config_inc.php:/var/www/html/config/config_inc.php:ro
+    networks:
+      - interna
+    depends_on:
+      mantis-db:
+        condition: service_healthy
+      mantis-correo:
+        condition: service_started
+
+  mantis-correo:
+    image: axllent/mailpit@sha256:23fe39e81bde596a918000b3135c0f85dc8bb4c9ea6be274b051143f3e300387
+    profiles: [incidencias]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MANTIS_MAIL_PORT:-8026}:8025"
+    networks:
+      - interna
+
   backup:
     image: postgres:17-alpine
     profiles: [backup]
@@ -101,3 +156,4 @@ volumes:
   pg_data:
   pgadmin_data:
   pg_backups:
+  mantis_db_data:
