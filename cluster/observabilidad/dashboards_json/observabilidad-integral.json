@@ -1,0 +1,1075 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ffyx82a3iptkwb"
+      },
+      "description": "Disponibilidad en tiempo real de todos los servicios monitoreados por Prometheus y cAdvisor.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "🔥 CAÍDO"
+                },
+                "1": {
+                  "color": "green",
+                  "text": "✅ ONLINE"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 14,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": false
+      },
+      "pluginVersion": "13.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "up",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "{{instance}}",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "pg_up",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "BD Sodería (HAProxy)",
+          "range": false,
+          "refId": "B"
+        }
+      ],
+      "title": "1. Disponibilidad de la Aplicación y Estado de Contenedores (UP / DOWN)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ffyx82a3iptkwb"
+      },
+      "description": "Cantidad de reinicios detectados en la última hora en los contenedores y nodos del clúster.",
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 10,
+        "x": 14,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": false
+      },
+      "pluginVersion": "13.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "changes(patroni_postmaster_start_time[1h])",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "{{name}}",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "changes(process_start_time_seconds[1h])",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "{{job}}",
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "sum(container_oom_events_total{id=\"/\"}) or vector(0)",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "OOM Events",
+          "range": false,
+          "refId": "C"
+        }
+      ],
+      "title": "2. Reinicios de Contenedores (Última Hora) y Eventos OOM",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ffyx82a3iptkwb"
+      },
+      "description": "Verifica en vivo qué nodos están replicando por streaming WAL desde el Líder.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "🔥 CAÍDO"
+                },
+                "1": {
+                  "color": "green",
+                  "text": "🔄 STREAMING"
+                },
+                "2": {
+                  "color": "blue",
+                  "text": "👑 PRIMARIO"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              },
+              {
+                "color": "blue",
+                "value": 2
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
+      "id": 11,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": false
+      },
+      "pluginVersion": "13.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "(patroni_primary * 2 + patroni_postgres_streaming) * on(instance) group_left() up{job=\"patroni_cluster\"}",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "{{name}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "11. Estado de Replicación Streaming por Nodo (Patroni / PostgreSQL)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ffyx82a3iptkwb"
+      },
+      "description": "Diferencia en bytes entre el WAL recibido y el WAL aplicado en las réplicas (0 Bytes = Sincronización perfecta).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": true,
+            "axisLabel": "Lag (Bytes)",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "showPoints": "always"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 7
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "13.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "(patroni_xlog_received_location - patroni_xlog_replayed_location) * on(instance) group_left() up{job=\"patroni_cluster\"}",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Lag {{name}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "pg_stat_replication_pg_wal_lsn_diff",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "WAL Diff ({{application_name}})",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "12. Lag de Replicación en Tiempo Real (Bytes de Retraso WAL)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ffyx82a3iptkwb"
+      },
+      "description": "Tiempo activo continuo real de cada servicio y contenedor (filtra nodos apagados para evitar saltos de epoch 1970).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": true,
+            "axisLabel": "Uptime Activo",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "min": 0,
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "13.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "(time() - (patroni_postmaster_start_time > 0)) * on(instance) group_left() (up{job=\"patroni_cluster\"} == 1)",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Nodo {{name}} ({{instance}})",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "time() - (process_start_time_seconds > 0)",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Servicio {{job}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "3. Tiempo de Actividad Continuo (Uptime Real) por Servicio y Contenedor",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ffyx82a3iptkwb"
+      },
+      "description": "Uso de CPU recolectado por cAdvisor y Prometheus.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": true,
+            "axisLabel": "% CPU",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 21
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "13.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "sum by (id) (rate(container_cpu_usage_seconds_total{job=\"cadvisor\", id=~\"/|/docker\"}[1m])) * 100",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "CPU Total ({{id}})",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "sum by (id) (rate(container_cpu_user_seconds_total{job=\"cadvisor\", id=\"/\"}[1m])) * 100",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "CPU Usuario",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "sum by (id) (rate(container_cpu_system_seconds_total{job=\"cadvisor\", id=\"/\"}[1m])) * 100",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "CPU Sistema / Kernel",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "4. Uso de CPU del Entorno Docker y Contenedores (%)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ffyx82a3iptkwb"
+      },
+      "description": "Consumo de memoria RAM en tiempo real reportado por cAdvisor y exportadores.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": true,
+            "axisLabel": "Memoria RAM",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 21
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "13.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "container_memory_working_set_bytes{job=\"cadvisor\", id=~\"/|/docker\"}",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "RAM Working Set ({{id}})",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "container_memory_usage_bytes{job=\"cadvisor\", id=\"/\"}",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "RAM Total Host Docker",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "process_resident_memory_bytes",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "RAM {{job}}",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "5. Uso de Memoria RAM (Working Set / Total / Procesos)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ffyx82a3iptkwb"
+      },
+      "description": "Espacio utilizado en disco por la base de datos sodería, segmentos WAL y contenedores.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": true,
+            "axisLabel": "Espacio en Disco",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 30
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "13.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "pg_database_size_bytes{datname=\"soderia\"}",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Tamaño BD Sodería",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "pg_wal_size_bytes",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Tamaño Archivos WAL",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "max(container_fs_usage_bytes{job=\"cadvisor\", id=\"/\"})",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Disco Usado Contenedores (cAdvisor)",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "6. Uso de Disco (Base de Datos Sodería, WAL y Contenedores)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ffyx82a3iptkwb"
+      },
+      "description": "Tráfico total de red entrante (RX) y saliente (TX) de los contenedores.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": true,
+            "axisLabel": "Tráfico Red",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "Bps"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 30
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "13.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "sum(rate(container_network_receive_bytes_total{job=\"cadvisor\"}[1m]))",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Total RX Recibido (Entrante)",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "sum(rate(container_network_transmit_bytes_total{job=\"cadvisor\"}[1m]))",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Total TX Transmitido (Saliente)",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "7. Tráfico de Red (Bytes Recibidos RX vs Transmitidos TX por Segundo)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ffyx82a3iptkwb"
+      },
+      "description": "Cantidad de conexiones activas e inactivas en la base de datos sodería.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": true,
+            "axisLabel": "Conexiones",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "decimals": 0
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 39
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "13.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "sum(pg_stat_database_numbackends{datname=\"soderia\"})",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Total Conexiones Sodería",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "sum by (state) (pg_stat_activity_count{datname=\"soderia\"})",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Sesiones: {{state}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "8. Conexiones Activas a la Base de Datos (pg_stat_activity)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ffyx82a3iptkwb"
+      },
+      "description": "Detecta consultas lentas midiendo la duración máxima de transacciones en curso y bloqueos activos.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": true,
+            "axisLabel": "Segundos / Locks",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "showPoints": "never"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 39
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "13.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "max(pg_stat_activity_max_tx_duration{datname=\"soderia\"}) or vector(0)",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Duración Máx Consulta (s)",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "sum(pg_locks_count{datname=\"soderia\"})",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Total Locks Activos",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "sum(pg_stat_database_deadlocks{datname=\"soderia\"})",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Deadlocks",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "9. Consultas Lentas (Duración Máxima) y Bloqueos (Locks)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ffyx82a3iptkwb"
+      },
+      "description": "Rendimiento transaccional y operaciones de filas por segundo en la base de datos sodería.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": true,
+            "axisLabel": "Operaciones / seg",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "13.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "rate(pg_stat_database_xact_commit{datname=\"soderia\"}[1m])",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Commits / seg",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "rate(pg_stat_database_xact_rollback{datname=\"soderia\"}[1m])",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Rollbacks / seg",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "rate(pg_stat_database_tup_fetched{datname=\"soderia\"}[1m])",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Filas Leídas / seg",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ffyx82a3iptkwb"
+          },
+          "expr": "rate(pg_stat_database_tup_inserted{datname=\"soderia\"}[1m])",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "Filas Insertadas / seg",
+          "range": true,
+          "refId": "D"
+        }
+      ],
+      "title": "10. Métricas de Base de Datos (Transacciones y Filas por Segundo)",
+      "type": "timeseries"
+    }
+  ],
+  "preload": false,
+  "refresh": "5s",
+  "schemaVersion": 42,
+  "tags": [
+    "soderia",
+    "observabilidad",
+    "postgresql",
+    "cadvisor"
+  ],
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Observabilidad Integral - Sodería (Infraestructura, Contenedores y PostgreSQL HA)",
+  "uid": "soderia-observabilidad-integral",
+  "version": 1
+}
