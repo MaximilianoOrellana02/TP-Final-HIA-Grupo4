@@ -8,3 +8,11 @@ dist/
 .angular/
 
 /Evidencias/
+
+# Herramientas y archivos locales
+.agents/
+AGENTS.md
+entities.json
+mempalace.yaml
+skills-lock.json
+temp/
