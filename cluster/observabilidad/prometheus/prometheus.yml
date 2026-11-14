@@ -1,0 +1,32 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # 1. El propio Prometheus.
+  - job_name: 'prometheus'
+    scrape_interval: 2s
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 2. PostgreSQL a traves de HAProxy (siempre el primario).
+  - job_name: 'postgres_cluster'
+    scrape_interval: 2s
+    static_configs:
+      - targets: ['postgres_exporter:9187']
+
+  # 3. Metricas de contenedores / host.
+  - job_name: 'cadvisor'
+    scrape_interval: 2s
+    static_configs:
+      - targets: ['cadvisor_monitor:8080']
+
+  # 4. Patroni de cada nodo: rol, estado y lag de replicacion.
+  - job_name: 'patroni_cluster'
+    scrape_interval: 2s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - 'nodo1:8008'
+          - 'nodo2:8008'
+          - 'nodo3:8008'

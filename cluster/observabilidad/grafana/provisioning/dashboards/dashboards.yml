@@ -1,0 +1,15 @@
+apiVersion: 1
+
+# Provisiona automaticamente los JSON de ../dashboards_json dentro de Grafana.
+# Si el integrante no copia grafana_data, los dashboards aparecen igualmente.
+providers:
+  - name: Sodería
+    orgId: 1
+    folder: Sodería / Clúster
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

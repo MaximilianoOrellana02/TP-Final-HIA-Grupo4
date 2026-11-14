@@ -7,6 +7,13 @@ node_modules/
 dist/
 .angular/
 
+# Datos persistidos en tiempo de ejecución (bind mounts; los recrea Docker al levantar)
+/datos/
+cluster/datos_db/
+cluster/observabilidad/grafana_data/
+cluster/observabilidad/prometheus_data/
+
+# Evidencias locales
 /Evidencias/
 
 # Herramientas y archivos locales

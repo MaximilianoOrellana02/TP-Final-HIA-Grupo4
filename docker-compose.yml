@@ -1,25 +1,19 @@
 name: soderia
 
+# ---------------------------------------------------------------------------
+# Infraestructura completa en un único archivo:
+#   - Aplicación Sodería (backend + frontend + pgAdmin + backup)
+#   - Clúster PostgreSQL HA (etcd + Patroni + HAProxy)
+#   - Observabilidad (Prometheus + Grafana + exporters)
+#
+# Todos los servicios comparten la red bridge `red_cluster`. Ningún servicio
+# interno publica puertos al host: la comunicación es por nombre de servicio.
+# ---------------------------------------------------------------------------
+
 services:
-  db:
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      TZ: America/Argentina/Jujuy
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    networks:
-      - interna
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 10s
-    # Sin "ports": la base no se expone al host
+  # =========================================================================
+  # APLICACIÓN
+  # =========================================================================
 
   backend:
     image: ghcr.io/maximilianoorellana02/soderia-backend:latest
@@ -29,23 +23,26 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
     environment:
       PORT: 3001
-      DB_HOST: db
+      # La aplicación nunca habla con un nodo: siempre entra por HAProxy, que
+      # enruta al primario de Patroni. El alias de red `db` mantiene compatibilidad.
+      DB_HOST: haproxy
       DB_PORT: 5432
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      FRONTEND_URL: ${FRONTEND_URL}
-      FRONTEND_URL_RESET: ${FRONTEND_URL}
+      DB_NAME: ${DB_NAME:-soderia}
+      DB_USER: ${DB_USER:-soderia}
+      DB_PASSWORD: ${DB_PASSWORD:-soderia_local}
+      JWT_SECRET: ${JWT_SECRET:-cambiar-este-secreto-en-produccion}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      FRONTEND_URL_RESET: ${FRONTEND_URL:-http://localhost:8080}
       GMAIL_USER: ${GMAIL_USER:-}
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
       MP_HABILITADO: "false"
       TZ: America/Argentina/Jujuy
     depends_on:
-      db:
+      # HAProxy solo se reporta healthy cuando ve un primario de PostgreSQL.
+      haproxy:
         condition: service_healthy
     networks:
-      - interna
+      - red_cluster
 
   frontend:
     image: ghcr.io/maximilianoorellana02/soderia-frontend:latest
@@ -54,27 +51,29 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     ports:
+      # Único punto de entrada web de la aplicación.
       - "${FRONTEND_PORT:-8080}:80"
     depends_on:
       - backend
     networks:
-      - interna
+      - red_cluster
 
   pgadmin:
     image: dpage/pgadmin4
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
     ports:
       - "127.0.0.1:5050:80"
     volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    networks:
-      - interna
+      # Persistencia dentro del proyecto.
+      - ./datos/pgadmin:/var/lib/pgadmin
     depends_on:
-      db:
+      haproxy:
         condition: service_healthy
+    networks:
+      - red_cluster
 
   mantis-db:
     image: mariadb@sha256:0e4bb0f339feba125d1154fbacd36c16ec8518f52e44e1f82ecec7d6771caf39
@@ -135,10 +134,10 @@ services:
     image: postgres:17-alpine
     profiles: [backup]
     environment:
-      PGHOST: db
-      PGDATABASE: ${DB_NAME}
-      PGUSER: ${DB_USER}
-      PGPASSWORD: ${DB_PASSWORD}
+      PGHOST: haproxy
+      PGDATABASE: ${DB_NAME:-soderia}
+      PGUSER: ${DB_USER:-soderia}
+      PGPASSWORD: ${DB_PASSWORD:-soderia_local}
     entrypoint: ["/bin/sh", "-ec"]
     command:
       - |
@@ -148,12 +147,234 @@ services:
         mv "$$backup_tmp" "$$backup_tmp.dump"
         printf 'Backup guardado en %s\n' "$$backup_tmp.dump"
     volumes:
-      - pg_backups:/backups
-    networks:
-      - interna
+      # Persistencia dentro del proyecto.
+      - ./datos/backups:/backups
     depends_on:
-      db:
+      haproxy:
         condition: service_healthy
+    networks:
+      - red_cluster
+
+  # =========================================================================
+  # CLÚSTER POSTGRESQL HA (Patroni + etcd + HAProxy)
+  # =========================================================================
+
+  # 1. Almacén de votos (DCS). Solo accesible internamente por Patroni.
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.17
+    container_name: etcd_cerebro
+    restart: unless-stopped
+    environment:
+      - ETCD_NAME=etcd
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+      - ETCD_DATA_DIR=/etcd-data
+    volumes:
+      - ./cluster/datos_db/etcd_data:/etcd-data
+    networks:
+      - red_cluster
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  # 2. Nodos PostgreSQL 17 + Patroni. Sin puertos publicados: 5432 y 8008 solo
+  #    son accesibles dentro de `red_cluster` (HAProxy y Prometheus).
+  nodo1:
+    build: ./cluster/scripts
+    container_name: postgres_nodo1
+    restart: unless-stopped
+    environment:
+      - PATRONI_NAME=nodo1
+      - PATRONI_RESTAPI_CONNECT_ADDRESS=nodo1:8008
+      - PATRONI_POSTGRESQL_CONNECT_ADDRESS=nodo1:5432
+      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_USERNAME=postgres
+      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_PASSWORD=root
+      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_USERNAME=replicator
+      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_SUPERUSER_USERNAME=postgres
+      - PATRONI_SUPERUSER_PASSWORD=root
+      - PATRONI_REPLICATION_USERNAME=replicator
+      - PATRONI_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_ETCD3_HOSTS=etcd:2379
+      - PATRONI_SCOPE=cluster_bancario
+      - PATRONI_POSTGRESQL_DATA_DIR=/var/lib/postgresql/data
+      - PATRONI_POSTGRESQL_BIN_DIR=/usr/lib/postgresql/17/bin
+      - PATRONI_POSTGRESQL_LISTEN=0.0.0.0:5432
+      - PATRONI_RESTAPI_LISTEN=0.0.0.0:8008
+      # Credenciales que crea post_bootstrap.sh en el bootstrap.
+      - SODERIA_DB_NAME=${DB_NAME:-soderia}
+      - SODERIA_DB_USER=${DB_USER:-soderia}
+      - SODERIA_DB_PASSWORD=${DB_PASSWORD:-soderia_local}
+    volumes:
+      - ./cluster/datos_db/nodo1_data:/var/lib/postgresql/data
+    networks:
+      - red_cluster
+    depends_on:
+      etcd:
+        condition: service_healthy
+
+  nodo2:
+    build: ./cluster/scripts
+    container_name: postgres_nodo2
+    restart: unless-stopped
+    environment:
+      - PATRONI_NAME=nodo2
+      - PATRONI_RESTAPI_CONNECT_ADDRESS=nodo2:8008
+      - PATRONI_POSTGRESQL_CONNECT_ADDRESS=nodo2:5432
+      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_USERNAME=postgres
+      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_PASSWORD=root
+      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_USERNAME=replicator
+      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_SUPERUSER_USERNAME=postgres
+      - PATRONI_SUPERUSER_PASSWORD=root
+      - PATRONI_REPLICATION_USERNAME=replicator
+      - PATRONI_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_ETCD3_HOSTS=etcd:2379
+      - PATRONI_SCOPE=cluster_bancario
+      - PATRONI_POSTGRESQL_DATA_DIR=/var/lib/postgresql/data
+      - PATRONI_POSTGRESQL_BIN_DIR=/usr/lib/postgresql/17/bin
+      - PATRONI_POSTGRESQL_LISTEN=0.0.0.0:5432
+      - PATRONI_RESTAPI_LISTEN=0.0.0.0:8008
+      - SODERIA_DB_NAME=${DB_NAME:-soderia}
+      - SODERIA_DB_USER=${DB_USER:-soderia}
+      - SODERIA_DB_PASSWORD=${DB_PASSWORD:-soderia_local}
+    volumes:
+      - ./cluster/datos_db/nodo2_data:/var/lib/postgresql/data
+    networks:
+      - red_cluster
+    depends_on:
+      etcd:
+        condition: service_healthy
+
+  nodo3:
+    build: ./cluster/scripts
+    container_name: postgres_nodo3
+    restart: unless-stopped
+    environment:
+      - PATRONI_NAME=nodo3
+      - PATRONI_RESTAPI_CONNECT_ADDRESS=nodo3:8008
+      - PATRONI_POSTGRESQL_CONNECT_ADDRESS=nodo3:5432
+      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_USERNAME=postgres
+      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_PASSWORD=root
+      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_USERNAME=replicator
+      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_SUPERUSER_USERNAME=postgres
+      - PATRONI_SUPERUSER_PASSWORD=root
+      - PATRONI_REPLICATION_USERNAME=replicator
+      - PATRONI_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_ETCD3_HOSTS=etcd:2379
+      - PATRONI_SCOPE=cluster_bancario
+      - PATRONI_POSTGRESQL_DATA_DIR=/var/lib/postgresql/data
+      - PATRONI_POSTGRESQL_BIN_DIR=/usr/lib/postgresql/17/bin
+      - PATRONI_POSTGRESQL_LISTEN=0.0.0.0:5432
+      - PATRONI_RESTAPI_LISTEN=0.0.0.0:8008
+      - SODERIA_DB_NAME=${DB_NAME:-soderia}
+      - SODERIA_DB_USER=${DB_USER:-soderia}
+      - SODERIA_DB_PASSWORD=${DB_PASSWORD:-soderia_local}
+    volumes:
+      - ./cluster/datos_db/nodo3_data:/var/lib/postgresql/data
+    networks:
+      - red_cluster
+    depends_on:
+      etcd:
+        condition: service_healthy
+
+  # 3. Enrutador / punto de entrada SQL. Solo publica el panel de estadísticas;
+  #    el puerto 5432 queda comentado a propósito (no se expone la BD al host).
+  haproxy:
+    image: haproxy:alpine
+    container_name: haproxy_router
+    restart: unless-stopped
+    ports:
+      # - "5432:5432"   # PostgreSQL: solo red interna (backend/pgadmin/backup)
+      - "7000:7000"     # Panel de estadísticas para demostrar el failover
+    volumes:
+      - ./cluster/config/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks:
+      red_cluster:
+        aliases:
+          - db          # compatibilidad: backend puede usar DB_HOST=db
+    depends_on:
+      - nodo1
+      - nodo2
+      - nodo3
+    healthcheck:
+      # Solo healthy cuando HAProxy ve al menos un primario (backend status UP).
+      test: ["CMD-SHELL", "wget -qO- 'http://127.0.0.1:7000/;csv' | grep -q 'postgres_back,BACKEND.*UP'"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 60s
+
+  # =========================================================================
+  # OBSERVABILIDAD
+  # =========================================================================
+
+  # Exportador de métricas de PostgreSQL. Sin puertos: solo lo consulta Prometheus.
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgres_exporter
+    restart: unless-stopped
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${DB_USER:-soderia}:${DB_PASSWORD:-soderia_local}@haproxy:5432/${DB_NAME:-soderia}?sslmode=disable
+    depends_on:
+      haproxy:
+        condition: service_healthy
+    networks:
+      - red_cluster
+
+  # Métricas de contenedores/host. Sin puertos: solo lo consulta Prometheus.
+  cadvisor_monitor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor_monitor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - red_cluster
+
+  # Prometheus: sin puertos hacia el host; Grafana lo consume por nombre.
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus_server
+    restart: unless-stopped
+    volumes:
+      - ./cluster/observabilidad/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # Persistencia de la serie temporal dentro del proyecto.
+      - ./cluster/observabilidad/prometheus_data:/prometheus
+    networks:
+      - red_cluster
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana_dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - ./cluster/observabilidad/grafana_data:/var/lib/grafana
+      # Provisioning: datasource + dashboards se cargan al iniciar.
+      - ./cluster/observabilidad/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./cluster/observabilidad/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./cluster/observabilidad/dashboards_json:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    networks:
+      - red_cluster
+
+  # =========================================================================
+  # DESPLIEGUE CONTINUO
+  # =========================================================================
 
   watchtower:
     image: containrrr/watchtower
@@ -164,11 +385,14 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     command: --interval 30 --cleanup --label-enable
 
+# ---------------------------------------------------------------------------
+# Redes del stack. Los servicios del clúster se resuelven por nombre en red_cluster.
+# ---------------------------------------------------------------------------
 networks:
+  red_cluster:
+    name: red_cluster
+    driver: bridge
   interna:
 
 volumes:
-  pg_data:
-  pgadmin_data:
-  pg_backups:
   mantis_db_data:

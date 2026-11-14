@@ -1,0 +1,55 @@
+bootstrap:
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    # 100 MB: un replica con mas retraso que esto no puede ser promovida.
+    maximum_lag_on_failover: 104857600
+    postgresql:
+      use_pg_rewind: true
+      use_slots: true
+      parameters:
+        # Conexiones y memoria. Ajustar shared_buffers si el host tiene poca RAM.
+        max_connections: 300
+        shared_buffers: 256MB
+        effective_cache_size: 1GB
+        work_mem: 8MB
+        maintenance_work_mem: 256MB
+        max_worker_processes: 8
+        max_parallel_workers: 8
+        max_parallel_workers_per_gather: 2
+
+        # WAL y checkpoints: pensado para cargas masivas / pgbench.
+        wal_keep_size: 1024MB
+        max_wal_size: 4GB
+        min_wal_size: 1GB
+        wal_compression: on
+        checkpoint_completion_target: 0.9
+
+        # Planificador y diagnostico.
+        random_page_cost: 1.1
+        effective_io_concurrency: 200
+        track_io_timing: on
+        log_min_duration_statement: 1000
+
+        # Las replicas fisicas informan al primario para no reciclar WAL que aun necesitan.
+        hot_standby_feedback: on
+
+      pg_hba:
+        # Conexiones locales (socket y loopback): necesarias para el bootstrap y Patroni.
+        - local all all trust
+        - local replication all trust
+        - host all all 127.0.0.1/32 trust
+        - host replication all 127.0.0.1/32 trust
+        # Aplicacion y replicacion desde la red interna de Docker.
+        - host replication replicator 0.0.0.0/0 md5
+        - host all all 0.0.0.0/0 md5
+
+  initdb:
+    - encoding: UTF8
+    - data-checksums
+
+  # Se ejecuta UNA sola vez, en el nodo que gana el bootstrap.
+  # Crea el usuario/base de la Sodería y la extension pg_trgm.
+  # Importante: en Patroni 4.x va al nivel de `bootstrap`, no dentro de `postgresql`.
+  post_bootstrap: /usr/local/bin/post_bootstrap.sh
