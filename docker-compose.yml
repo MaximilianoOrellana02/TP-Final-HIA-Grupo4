@@ -22,8 +22,11 @@ services:
     # Sin "ports": la base no se expone al host
 
   backend:
+    image: ghcr.io/maximilianoorellana02/soderia-backend:latest
     build: ./backend
     restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     environment:
       PORT: 3001
       DB_HOST: db
@@ -45,8 +48,11 @@ services:
       - interna
 
   frontend:
+    image: ghcr.io/maximilianoorellana02/soderia-frontend:latest
     build: ./frontend
     restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     ports:
       - "${FRONTEND_PORT:-8080}:80"
     depends_on:
@@ -148,6 +154,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    environment:
+      DOCKER_API_VERSION: "1.44"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 30 --cleanup --label-enable
 
 networks:
   interna:
