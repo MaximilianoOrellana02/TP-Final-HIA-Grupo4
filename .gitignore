@@ -15,3 +15,11 @@ cluster/observabilidad/prometheus_data/
 
 # Evidencias locales
 /Evidencias/
+
+# Herramientas y archivos locales
+.agents/
+AGENTS.md
+entities.json
+mempalace.yaml
+skills-lock.json
+temp/
