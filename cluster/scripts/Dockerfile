@@ -10,6 +10,7 @@ RUN apt-get update \
 COPY patroni.yml /etc/patroni/patroni.yml
 COPY post_bootstrap.sh /usr/local/bin/post_bootstrap.sh
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod 755 /usr/local/bin/post_bootstrap.sh /usr/local/bin/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/post_bootstrap.sh /usr/local/bin/docker-entrypoint.sh \
+    && chmod 755 /usr/local/bin/post_bootstrap.sh /usr/local/bin/docker-entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

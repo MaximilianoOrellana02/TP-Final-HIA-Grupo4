@@ -20,6 +20,22 @@ export class ClienteService {
     };
   }
 
+  listarPaginado(page: number, search: string = '', filtros: { deuda?: boolean; comercial?: boolean; archivados?: boolean } = {}): Observable<{ items: Cliente[]; page: number; limit: number; total: number; hasMore: boolean }> {
+    return this.http.get<{ items: Cliente[]; page: number; limit: number; total: number; hasMore: boolean }>(this.baseUrl, {
+      params: {
+        page,
+        limit: 25,
+        ...(search.trim() ? { search: search.trim() } : {}),
+        ...(filtros.deuda ? { deuda: true } : {}),
+        ...(filtros.comercial ? { comercial: true } : {}),
+        ...(filtros.archivados ? { archivados: true } : {}),
+      },
+    }).pipe(map((resultado) => ({
+      ...resultado,
+      items: resultado.items.map((c) => this.normalizarCliente(c)),
+    })));
+  }
+
   listar(): Observable<Cliente[]> {
     return this.http
       .get<Cliente[]>(this.baseUrl)
