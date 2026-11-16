@@ -12,11 +12,6 @@ import PagoModal from '../../../shared/pago-modal/pago-modal';
 type Filtro = 'todos' | 'deuda' | 'ruta' | 'frecuentes';
 type AccionPrincipal = 'entregar' | 'cobrar' | 'detalle';
 
-// Minúsculas y sin acentos, para que "gomez" encuentre "Gómez".
-function normalizar(texto: string): string {
-  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-}
-
 @Component({
   selector: 'app-clientes-list',
   imports: [RouterLink, DecimalPipe, PagoModal],
@@ -41,7 +36,6 @@ export default class ClientesList implements OnInit {
   error = signal<string | null>(null);
   viendoArchivados = signal(false);
   restaurandoId = signal<string | null>(null);
-  limiteVisible = signal(25);
   pagina = signal(1);
   totalClientes = signal(0);
   hayMas = signal(false);
@@ -154,7 +148,6 @@ export default class ClientesList implements OnInit {
   }
 
   private reiniciarPaginado() {
-    this.limiteVisible.set(25);
     this.cargarClientes();
   }
 
