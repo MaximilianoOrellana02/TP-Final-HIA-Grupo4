@@ -12,9 +12,12 @@
       </div>
     </div>
 
-    <div class="navbar-actions">
-      <button class="btn-icon-nav" (click)="abrirConfiguracion()" aria-label="Configuración">
-        <i class="bi bi-gear"></i>
+    <div class="navbar-actions navbar-actions-verificacion">
+      <button type="button" class="btn-cambio-aplicado"
+        (click)="verificarCambio()" [disabled]="verificandoCambio()"
+        aria-label="Verificar que la paginación de clientes está aplicada">
+        <i class="bi bi-check-circle"></i>
+        {{ verificandoCambio() ? 'Verificando…' : 'Cambio aplicado' }}
       </button>
     </div>
   </header>
@@ -91,9 +94,6 @@
     </a>
   </nav>
 </div>
-@if (mostrarConfiguracion()) {
-  <app-settings-modal (cerrar)="cerrarConfiguracion()"></app-settings-modal>
-}
 @if (repartoService.verResumen()) {
   <app-resumen-reparto-modal (cerrar)="repartoService.cerrarResumen()"></app-resumen-reparto-modal>
 }
