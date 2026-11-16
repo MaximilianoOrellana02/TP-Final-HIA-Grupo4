@@ -41,7 +41,13 @@ export default class ClientesList implements OnInit {
   error = signal<string | null>(null);
   viendoArchivados = signal(false);
   restaurandoId = signal<string | null>(null);
-  limiteVisible = signal(10);
+  limiteVisible = signal(25);
+  pagina = signal(1);
+  totalClientes = signal(0);
+  hayMas = signal(false);
+  cargandoMas = signal(false);
+  private solicitud = 0;
+  private temporizadorBusqueda: ReturnType<typeof setTimeout> | null = null;
 
   busqueda = signal('');
   filtro = signal<Filtro>('todos');
@@ -62,7 +68,7 @@ export default class ClientesList implements OnInit {
   conteos = computed(() => {
     const clientes = this.clientes();
     return {
-      todos: clientes.length,
+      todos: this.totalClientes(),
       deuda: clientes.filter((c) => c.saldoActual > 0).length,
       ruta: clientes.filter((c) => this.enRutaHoy().has(c.id)).length,
       frecuentes: clientes.filter((c) => this.actividad().get(c.id)?.frecuente).length,
@@ -73,24 +79,18 @@ export default class ClientesList implements OnInit {
   );
 
   clientesFiltrados = computed(() => {
-    const texto = normalizar(this.busqueda());
-    const coincideTexto = (c: Cliente) =>
-      !texto ||
-      [`${c.nombre} ${c.apellido}`, `${c.apellido} ${c.nombre}`, c.direccion, c.telefono, c.localidad].some(
-        (dato) => dato && normalizar(dato).includes(texto),
-      );
-    if (this.viendoArchivados()) return this.clientes().filter(coincideTexto);
+    if (this.viendoArchivados()) return this.clientes();
 
     const diasViejos = new Map(this.deudaVieja().map((d) => [d.id, d.diasSinPagar]));
     let lista = this.clientes().filter((c) => {
-      if (!coincideTexto(c)) return false;
+      // El texto, la deuda y la categoría ya se filtran en la base de datos.
       switch (this.filtro()) {
-        case 'deuda': if (c.saldoActual <= 0) return false; break;
+        case 'deuda': break;
         case 'ruta': if (!this.enRutaHoy().has(c.id)) return false; break;
         case 'frecuentes': if (!this.actividad().get(c.id)?.frecuente) return false; break;
       }
       if (this.dia() && !this.diasDelCliente(c).includes(this.dia() as DiaSemana)) return false;
-      if (this.soloComerciales() && c.categoria !== 'restaurante') return false;
+      // La categoría comercial también se aplica en el servidor.
       if (this.soloDeudaVieja() && !diasViejos.has(c.id)) return false;
       return true;
     });
@@ -102,8 +102,8 @@ export default class ClientesList implements OnInit {
     }
     return lista;
   });
-  clientesMostrados = computed(() => this.clientesFiltrados().slice(0, this.limiteVisible()));
-  cantidadRestante = computed(() => Math.max(0, this.clientesFiltrados().length - this.limiteVisible()));
+  clientesMostrados = computed(() => this.clientesFiltrados());
+  cantidadRestante = computed(() => Math.max(0, this.totalClientes() - this.clientes().length));
 
   ngOnInit() {
     this.cargarClientes();
@@ -119,29 +119,51 @@ export default class ClientesList implements OnInit {
     });
   }
 
-  cargarClientes() {
-    this.cargando.set(true);
-    this.error.set(null);
-    const listado = this.viendoArchivados() ? this.clienteService.listarDesactivados() : this.clienteService.listar();
-    listado.subscribe({
-      next: (data) => {
-        this.clientes.set(data);
+  cargarClientes(agregar = false) {
+    if (agregar && (this.cargandoMas() || !this.hayMas())) return;
+    const solicitud = ++this.solicitud;
+    const page = agregar ? this.pagina() + 1 : 1;
+    if (agregar) this.cargandoMas.set(true);
+    else {
+      this.cargando.set(true);
+      this.error.set(null);
+      this.clientes.set([]);
+      this.hayMas.set(false);
+    }
+    this.clienteService.listarPaginado(page, this.busqueda(), {
+      archivados: this.viendoArchivados(),
+      deuda: !this.viendoArchivados() && this.filtro() === 'deuda',
+      comercial: !this.viendoArchivados() && this.soloComerciales(),
+    }).subscribe({
+      next: (respuesta) => {
+        if (solicitud !== this.solicitud) return;
+        this.clientes.update((actuales) => agregar ? [...actuales, ...respuesta.items] : respuesta.items);
+        this.pagina.set(respuesta.page);
+        this.totalClientes.set(respuesta.total);
+        this.hayMas.set(respuesta.hasMore);
         this.cargando.set(false);
+        this.cargandoMas.set(false);
       },
       error: () => {
-        this.error.set(this.viendoArchivados() ? 'No se pudieron cargar los clientes archivados' : 'No se pudieron cargar los clientes');
+        if (solicitud !== this.solicitud) return;
+        this.error.set('No se pudieron cargar los clientes');
         this.cargando.set(false);
+        this.cargandoMas.set(false);
       },
     });
   }
 
   private reiniciarPaginado() {
-    this.limiteVisible.set(10);
+    this.limiteVisible.set(25);
+    this.cargarClientes();
   }
 
   onBusqueda(texto: string) {
     this.busqueda.set(texto);
-    this.reiniciarPaginado();
+    if (this.temporizadorBusqueda) clearTimeout(this.temporizadorBusqueda);
+    // Invalidar inmediatamente la respuesta anterior aunque el debounce no haya terminado.
+    this.solicitud++;
+    this.temporizadorBusqueda = setTimeout(() => this.reiniciarPaginado(), 300);
   }
 
   cambiarFiltro(filtro: Filtro) {
@@ -175,11 +197,10 @@ export default class ClientesList implements OnInit {
     this.viendoArchivados.update((v) => !v);
     this.mostrarFiltros.set(false);
     this.reiniciarPaginado();
-    this.cargarClientes();
   }
 
   verMas() {
-    this.limiteVisible.update((v) => v + 15);
+    this.cargarClientes(true);
   }
 
   private diasDelCliente(c: Cliente): DiaSemana[] {
