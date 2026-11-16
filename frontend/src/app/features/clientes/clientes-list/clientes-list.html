@@ -58,13 +58,13 @@
     @if (!viendoArchivados()) {
     <div class="chips chips-scroll">
         <button type="button" class="chip" [class.active]="filtro() === 'todos'" (click)="cambiarFiltro('todos')">
-            Todos <span class="contador">{{ conteos().todos }}</span></button>
+            Todos <span class="contador">{{ filtro() === 'todos' ? totalClientes() : '—' }}</span></button>
         <button type="button" class="chip" [class.active]="filtro() === 'deuda'" (click)="cambiarFiltro('deuda')">
-            Con deuda <span class="contador">{{ conteos().deuda }}</span></button>
+            Con deuda <span class="contador">{{ filtro() === 'deuda' ? totalClientes() : '—' }}</span></button>
         <button type="button" class="chip" [class.active]="filtro() === 'ruta'" (click)="cambiarFiltro('ruta')">
-            Hoy en ruta <span class="contador">{{ conteos().ruta }}</span></button>
+            Hoy en ruta</button>
         <button type="button" class="chip" [class.active]="filtro() === 'frecuentes'" (click)="cambiarFiltro('frecuentes')">
-            Frecuentes <span class="contador">{{ conteos().frecuentes }}</span></button>
+            Frecuentes</button>
     </div>
 
     <div class="kpis">
@@ -78,7 +78,7 @@
         <div class="kpi">
             <span class="kpi-icono"><i class="bi bi-currency-dollar"></i></span>
             <span class="kpi-texto">
-                <span class="kpi-label">Saldo pendiente</span>
+                <span class="kpi-label">Saldo de clientes cargados</span>
                 <strong>${{ saldoPendiente() | number:'1.0-0' }}</strong>
             </span>
         </div>
@@ -98,7 +98,7 @@
     </div>
     }
 
-    @if (!cargando() && clientesFiltrados().length === 0 && !error()) {
+    @if (!cargando() && clientesFiltrados().length === 0 && !hayMas() && !error()) {
     <div class="state-message empty">
         <i class="bi bi-people"></i>
         <p>{{ viendoArchivados() ? 'No hay clientes archivados' : 'No hay clientes para mostrar' }}</p>
@@ -175,10 +175,14 @@
         }
     </ul>
 
-    @if (!cargando() && cantidadRestante() > 0) {
-    <button class="btn-load-more" (click)="verMas()">
-        Ver más ({{ cantidadRestante() }} restantes)
+    @if (!cargando() && hayMas()) {
+    <button class="btn-load-more" (click)="verMas()" [disabled]="cargandoMas()">
+        {{ cargandoMas() ? 'Cargando…' : 'Ver más (' + cantidadRestante() + ' restantes)' }}
     </button>
+    }
+
+    @if (!viendoArchivados() && (filtro() === 'ruta' || filtro() === 'frecuentes' || dia() || soloDeudaVieja())) {
+    <p class="state-message">Los filtros de ruta, frecuentes, día y deuda vieja se aplican a las páginas cargadas. Usá «Ver más» para consultar más clientes.</p>
     }
 
     <div class="print-only">

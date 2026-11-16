@@ -40,23 +40,56 @@ export async function crearCliente(req: AuthRequest, res: Response) {
   }
 }
 
+// La paginación se aplica en PostgreSQL, antes de serializar los clientes.
+// Sin parámetros se conserva el contrato anterior para consumidores existentes.
 export async function listarClientes(req: AuthRequest, res: Response) {
   try {
-    const clientes = await Cliente.findAll({
+    const paginaSolicitada = req.query.page;
+    if (paginaSolicitada === undefined) {
+      const clientes = await Cliente.findAll({
+        include: [
+          { model: SaldoEnvase, as: "saldosEnvase", attributes: ["productoId", "cantidad"] },
+          { model: Barrio, as: "barrio", attributes: ["id", "nombre"] },
+        ],
+        order: [["apellido", "ASC"], ["nombre", "ASC"], ["id", "ASC"]],
+      });
+      return res.json(clientes);
+    }
+
+    const page = Number(paginaSolicitada);
+    const limit = req.query.limit === undefined ? 25 : Number(req.query.limit);
+    if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+      return res.status(400).json({ error: "page debe ser positivo y limit debe estar entre 1 y 100" });
+    }
+    const search = typeof req.query.search === "string" ? req.query.search.trim().slice(0, 150) : "";
+    const where: WhereOptions = {};
+    if (search) {
+      const patron = `%${search.replace(/[\\%_]/g, "\\$&")}%`;
+      Object.assign(where, { [Op.or]: [
+        { nombre: { [Op.iLike]: patron } },
+        { apellido: { [Op.iLike]: patron } },
+        { direccion: { [Op.iLike]: patron } },
+        { telefono: { [Op.iLike]: patron } },
+        { localidad: { [Op.iLike]: patron } },
+      ] });
+    }
+    if (req.query.deuda === "true") Object.assign(where, { saldoActual: { [Op.gt]: 0 } });
+    if (req.query.comercial === "true") Object.assign(where, { categoria: "restaurante" });
+    const archivados = req.query.archivados === "true";
+    if (archivados) Object.assign(where, { deletedAt: { [Op.ne]: null } });
+    const { count, rows } = await Cliente.findAndCountAll({
+      paranoid: !archivados,
+      where,
       include: [
-        {
-          model: SaldoEnvase,
-          as: "saldosEnvase",
-          attributes: ["productoId", "cantidad"],
-        },
-        { model: Barrio, as: "barrio", attributes: ["id", "nombre"] },
+        { model: SaldoEnvase, as: "saldosEnvase", attributes: ["productoId", "cantidad"], required: false },
+        { model: Barrio, as: "barrio", attributes: ["id", "nombre"], required: false },
       ],
-      order: [
-        ["apellido", "ASC"],
-        ["nombre", "ASC"],
-      ],
+      distinct: true,
+      limit,
+      offset: (page - 1) * limit,
+      order: [["apellido", "ASC"], ["nombre", "ASC"], ["id", "ASC"]],
     });
-    return res.json(clientes);
+    return res.json({ items: rows, page, limit, total: count, hasMore: page * limit < count });
   } catch (error) {
     return responderErrorCliente(res, error, "Error al listar clientes");
   }
