@@ -11,7 +11,8 @@ scrape_configs:
 
   # 2. PostgreSQL a traves de HAProxy (siempre el primario).
   - job_name: 'postgres_cluster'
-    scrape_interval: 2s
+    scrape_interval: 15s
+    scrape_timeout: 10s
     static_configs:
       - targets: ['postgres_exporter:9187']
 

@@ -361,6 +361,7 @@ services:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/observabilidad-integral.json
     volumes:
       - ./cluster/observabilidad/grafana_data:/var/lib/grafana
       # Provisioning: datasource + dashboards se cargan al iniciar.
