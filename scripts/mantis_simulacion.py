@@ -278,7 +278,11 @@ def run() -> None:
             "noted": False, "assigned": False,
         }
         state["next_index"] = index + 1
-        state["next_creation_at"] = (now() + INTERVAL).isoformat()
+        accelerated_until = state.get("accelerated_until_index", 0)
+        accelerated_minutes = state.get("accelerated_interval_minutes", 15)
+        interval = (timedelta(minutes=accelerated_minutes)
+                    if state["next_index"] < accelerated_until else INTERVAL)
+        state["next_creation_at"] = (now() + interval).isoformat()
         record(state, "creación", case["number"], issue_id)
         return
 
