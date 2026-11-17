@@ -41,4 +41,11 @@ GRANT ALL ON SCHEMA public TO "$DB_USER";
 ALTER SCHEMA public OWNER TO "$DB_USER";
 SQL
 
+# El exportador de PostgreSQL consulta el tamano del WAL con este rol.
+psql -v ON_ERROR_STOP=1 -v db_user="$DB_USER" \
+     -h 127.0.0.1 -U "$SUPERUSER" -d postgres <<'SQL'
+SELECT format('GRANT EXECUTE ON FUNCTION pg_ls_waldir() TO %I', :'db_user')
+\gexec
+SQL
+
 echo "[post_bootstrap] Listo: base '${DB_NAME}', usuario '${DB_USER}', extension pg_trgm."
