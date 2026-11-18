@@ -70,6 +70,21 @@ test('all client routes require authentication', async () => {
     }
 });
 
+test('today route includes scheduled barrios and optional restaurants without loading every client', async () => {
+    const dias = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+    const dia = dias[new Date(fechaComercial() + 'T12:00:00Z').getUTCDay()];
+    const barrio = await Barrio.create({ nombre: 'Ruta ' + randomBytes(4).toString('hex'), diasVisita: [dia] });
+    await cliente.update({ barrioId: barrio.id });
+    const restaurante = await Cliente.create({ nombre: 'Restaurante', apellido: randomBytes(4).toString('hex'), categoria: 'restaurante' });
+    const normal = await request('/clientes/ruta-hoy?page=1');
+    assert.equal(normal.status, 200);
+    assert.ok(normal.body.items.some((c) => c.id === cliente.id));
+    assert.equal(normal.body.items.some((c) => c.id === restaurante.id), false);
+    const ampliada = await request('/clientes/ruta-hoy?page=1&incluirRestaurantes=true');
+    assert.ok(ampliada.body.items.some((c) => c.id === restaurante.id));
+    assert.equal((await request('/clientes/ruta-hoy?page=0')).status, 400);
+});
+
 test('malformed ids return 400 and absent valid ids return 404', async () => {
     for (const [suffix, method] of [['', 'GET'], ['', 'PUT'], ['', 'DELETE'], ['/envases', 'GET'], ['/ubicacion', 'PUT'], ['/visita', 'PUT'], ['/restaurar', 'PATCH']]) assert.equal((await request('/clientes/invalid' + suffix, method)).status, 400);
     assert.equal((await request('/clientes/11111111-1111-4111-8111-111111111111')).status, 404);
@@ -159,9 +174,9 @@ test('visit uses the Argentina date after 21:00', async t => {
 test('day filter accepts zero, rejects invalid/repeated values, and defaults to 30', async () => {
     await cliente.update({ saldoActual: 100 });
     await Historial.create({ clienteId: cliente.id, usuarioId: user.id, saldoAnterior: 0, importeTotal: 100, montoPagado: 0, saldoFinal: 100, fecha: new Date(Date.now() - 10 * 86400000) });
-    assert.ok((await request('/clientes/deuda-vieja?dias=0')).body.some(c => c.id === cliente.id));
-    assert.equal((await request('/clientes/deuda-vieja')).body.some(c => c.id === cliente.id), false);
-    for (const query of ['-1', 'abc', '1.5', '36501', '', '1&dias=2']) assert.equal((await request('/clientes/deuda-vieja?dias=' + query)).status, 400);
+    assert.ok((await request('/clientes/deuda-vieja?dias=0&ids=' + cliente.id)).body.some(c => c.id === cliente.id));
+    assert.equal((await request('/clientes/deuda-vieja?ids=' + cliente.id)).body.some(c => c.id === cliente.id), false);
+    for (const query of ['-1', 'abc', '1.5', '36501', '', '1&dias=2']) assert.equal((await request('/clientes/deuda-vieja?ids=' + cliente.id + '&dias=' + query)).status, 400);
 });
 
 test('debt report retains days since last payment semantics', async () => {
@@ -169,7 +184,7 @@ test('debt report retains days since last payment semantics', async () => {
     const fields = { clienteId: cliente.id, usuarioId: user.id, saldoAnterior: 0, importeTotal: 100, montoPagado: 0, saldoFinal: 100 };
     await Historial.create({ ...fields, fecha: new Date(Date.now() - 60 * 86400000) });
     await Historial.create({ ...fields, importeTotal: 0, montoPagado: 10, saldoFinal: 90, fecha: new Date() });
-    const result = await request('/clientes/deuda-vieja?dias=0');
+    const result = await request('/clientes/deuda-vieja?dias=0&ids=' + cliente.id);
     assert.equal(result.body.find(c => c.id === cliente.id).diasSinPagar, 0);
 });
 
@@ -278,7 +293,7 @@ test('raw debt query excludes archived clients', async () => {
     await cliente.update({ saldoActual: 10 });
     await Historial.create({ clienteId: cliente.id, usuarioId: user.id, saldoAnterior: 0, importeTotal: 10, montoPagado: 0, saldoFinal: 10 });
     await cliente.destroy();
-    const result = await request('/clientes/deuda-vieja?dias=0');
+    const result = await request('/clientes/deuda-vieja?dias=0&ids=' + cliente.id);
     assert.equal(result.status, 200); assert.equal(result.body.some(c => c.id === cliente.id), false);
 });
 
@@ -286,7 +301,9 @@ test('activity reports last real delivery, frequent clients and active clients t
     const producto = await Producto.create({ precioParticular: 100, precioConfianza: 90, nombre: 'Actividad ' + randomBytes(4).toString('hex'), stockActual: 100 });
     const frecuente = await Cliente.create({ nombre: 'Frecuente', apellido: randomBytes(4).toString('hex') });
     const soloPago = await Cliente.create({ nombre: 'SoloPago', apellido: randomBytes(4).toString('hex'), saldoActual: 100 });
-    const actividad = async () => (await request('/clientes/actividad')).body;
+    assert.equal((await request('/clientes/actividad')).status, 400);
+    assert.equal((await request('/clientes/deuda-vieja')).status, 400);
+    const actividad = async () => (await request('/clientes/actividad?ids=' + [cliente.id, frecuente.id, soloPago.id].join(','))).body;
     const de = (body, id) => body.clientes.find((c) => c.clienteId === id);
     const antes = (await actividad()).activosMes;
 

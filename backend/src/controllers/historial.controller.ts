@@ -210,25 +210,28 @@ export async function historialPorCliente(req: AuthRequest, res: Response) {
     );
     if (!(await Cliente.findByPk(clienteId, { paranoid: false })))
       return res.status(404).json({ error: "Cliente no encontrado" });
-    const { rows, count } = await Historial.findAndCountAll({
-      where: { clienteId, ...whereFecha(filtros) },
-      include: [
-        {
-          model: HistorialDetalle,
-          as: "detalles",
-          include: [
-            { model: Producto, as: "producto", attributes: ["id", "nombre"] },
-          ],
-        },
-      ],
-      order: [
-        ["fecha", "DESC"],
-        ["createdAt", "DESC"],
-      ],
-      limit: filtros.limit,
-      offset: (filtros.page - 1) * filtros.limit,
-      distinct: true,
-    });
+    const where = { clienteId, ...whereFecha(filtros) };
+    const [rows, count] = await Promise.all([
+      Historial.findAll({
+        where,
+        include: [
+          {
+            model: HistorialDetalle,
+            as: "detalles",
+            include: [
+              { model: Producto, as: "producto", attributes: ["id", "nombre"] },
+            ],
+          },
+        ],
+        order: [
+          ["fecha", "DESC"],
+          ["createdAt", "DESC"],
+        ],
+        limit: filtros.limit,
+        offset: (filtros.page - 1) * filtros.limit,
+      }),
+      Historial.count({ where }),
+    ]);
     res.setHeader("X-Total-Historial", String(count));
     return res.json(rows);
   } catch (error) {
@@ -239,24 +242,28 @@ export async function historialPorCliente(req: AuthRequest, res: Response) {
 export async function listarHistorial(req: AuthRequest, res: Response) {
   try {
     const filtros = validarFiltrosHistorial(req.query);
-    const { rows, count } = await Historial.findAndCountAll({
-      where: whereFecha(filtros),
-      include: [
-        {
-          model: Cliente,
-          as: "cliente",
-          attributes: ["id", "nombre", "apellido"],
-          paranoid: false,
-        },
-        { model: Usuario, as: "usuario", attributes: ["id", "nombreCompleto"] },
-      ],
-      order: [
-        ["fecha", "DESC"],
-        ["createdAt", "DESC"],
-      ],
-      limit: filtros.limit,
-      offset: (filtros.page - 1) * filtros.limit,
-    });
+    const where = whereFecha(filtros);
+    const [rows, count] = await Promise.all([
+      Historial.findAll({
+        where,
+        include: [
+          {
+            model: Cliente,
+            as: "cliente",
+            attributes: ["id", "nombre", "apellido"],
+            paranoid: false,
+          },
+          { model: Usuario, as: "usuario", attributes: ["id", "nombreCompleto"] },
+        ],
+        order: [
+          ["fecha", "DESC"],
+          ["createdAt", "DESC"],
+        ],
+        limit: filtros.limit,
+        offset: (filtros.page - 1) * filtros.limit,
+      }),
+      Historial.count({ where }),
+    ]);
     return res.json({
       data: rows,
       total: count,

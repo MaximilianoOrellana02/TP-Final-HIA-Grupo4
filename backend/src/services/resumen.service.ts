@@ -1,7 +1,8 @@
-import { col, fn, Op, WhereOptions } from "sequelize";
+import { col, fn, literal, Op, WhereOptions } from "sequelize";
 import Historial from "../models/Historial";
 import HistorialDetalle from "../models/HistorialDetalle";
 import Producto from "../models/Producto";
+import sequelize from "../config/database";
 import { RangoFechas, redondear } from "../utils/historial.validation";
 
 // Filtro de las entregas a resumir: un rango de fechas y, opcionalmente, un solo repartidor.
@@ -34,24 +35,29 @@ export async function resumir(filtro: FiltroResumen) {
   const totales = (await Historial.findOne({
     where,
     attributes: [
-      [fn("COUNT", col("id")), "cantidadEntregas"],
+      [fn("COUNT", literal("*")), "cantidadEntregas"],
       [fn("SUM", col("importeTotal")), "totalImporte"],
       [fn("SUM", col("montoPagado")), "totalPagado"],
     ],
     raw: true,
   })) as unknown as Totales | null;
-  const cantidades = (await HistorialDetalle.findAll({
-    include: [
-      { model: Historial, as: "historial", attributes: [], where },
-      { model: Producto, as: "producto", attributes: ["nombre"] },
-    ],
-    attributes: [
-      [fn("SUM", col("cantidadEntregada")), "entregados"],
-      [fn("SUM", col("cantidadEnvaseDevuelto")), "devueltos"],
-    ],
-    group: ["producto.id", "producto.nombre"],
-    order: [[col("producto.nombre"), "ASC"]],
-    raw: true,
+  // El ajuste se limita a este resumen; no modifica las otras consultas del servidor.
+  const cantidades = (await sequelize.transaction(async (transaction) => {
+    await sequelize.query("SET LOCAL max_parallel_workers_per_gather = 4", { transaction });
+    return HistorialDetalle.findAll({
+      include: [
+        { model: Historial, as: "historial", attributes: [], where },
+        { model: Producto, as: "producto", attributes: ["nombre"] },
+      ],
+      attributes: [
+        [fn("SUM", col("cantidadEntregada")), "entregados"],
+        [fn("SUM", col("cantidadEnvaseDevuelto")), "devueltos"],
+      ],
+      group: ["producto.id", "producto.nombre"],
+      order: [[col("producto.nombre"), "ASC"]],
+      raw: true,
+      transaction,
+    });
   })) as unknown as Array<{
     "producto.nombre": string;
     entregados: string;

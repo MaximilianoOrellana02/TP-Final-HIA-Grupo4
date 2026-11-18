@@ -8,6 +8,7 @@ import {
   crearCliente,
   eliminarCliente,
   listarClientes,
+  listarClientesDeHoy,
   listarDeudaVieja,
   marcarVisita,
   obtenerCliente,
@@ -26,6 +27,7 @@ router.param("id", (req, res, next, id) => {
 
 router.post("/", crearCliente);
 router.get("/", listarClientes);
+router.get("/ruta-hoy", listarClientesDeHoy);
 router.get("/desactivados", listarDesactivados);
 router.get("/deuda-vieja", listarDeudaVieja);
 router.get("/actividad", actividadClientes);
