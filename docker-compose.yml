@@ -346,13 +346,31 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus_server
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./cluster/observabilidad/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./cluster/observabilidad/prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
       # Persistencia de la serie temporal dentro del proyecto.
       - ./cluster/observabilidad/prometheus_data:/prometheus
     networks:
       - red_cluster
 
+  alertmanager:
+        image: prom/alertmanager:v0.35.0
+        container_name: alertmanager_server
+        restart: unless-stopped
+        command:
+          - '--config.file=/etc/alertmanager/alertmanager.yml'
+          - '--storage.path=/alertmanager'
+        ports:
+          - "127.0.0.1:9093:9093"
+        volumes:
+          - ./cluster/observabilidad/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+          - ./cluster/observabilidad/alertmanager/secrets/n8n_webhook_password:/etc/alertmanager/secrets/n8n_webhook_password:ro
+          - ./cluster/observabilidad/alertmanager_data:/alertmanager
+        networks:
+          - red_cluster
   grafana:
     image: grafana/grafana:latest
     container_name: grafana_dashboard

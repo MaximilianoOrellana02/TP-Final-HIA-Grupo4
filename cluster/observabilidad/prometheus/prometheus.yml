@@ -2,6 +2,24 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+# ---------------------------------------------------------------------------
+# CONEXIÓN CON ALERTMANAGER
+# ---------------------------------------------------------------------------
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - 'alertmanager:9093'
+
+# ---------------------------------------------------------------------------
+# REGLAS DE ALERTA Y EVALUACIÓN
+# ---------------------------------------------------------------------------
+rule_files:
+  - "alert.rules.yml"
+
+# ---------------------------------------------------------------------------
+# CONFIGURACIÓN DE SCRAPE
+# ---------------------------------------------------------------------------
 scrape_configs:
   # 1. El propio Prometheus.
   - job_name: 'prometheus'
@@ -28,6 +46,11 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets:
-          - 'nodo1:8008'
-          - 'nodo2:8008'
-          - 'nodo3:8008'
+        - 'nodo1:8008'
+        - 'nodo2:8008'
+        - 'nodo3:8008'
+
+  # 5. Monitoreo del propio Alertmanager.
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
