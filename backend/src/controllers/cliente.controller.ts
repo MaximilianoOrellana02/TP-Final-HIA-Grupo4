@@ -47,6 +47,13 @@ export async function listarClientes(req: AuthRequest, res: Response) {
   try {
     const paginaSolicitada = req.query.page;
     if (paginaSolicitada === undefined) {
+      const total = await Cliente.count();
+      if (total > 5000) {
+        return res.status(413).json({
+          error: "Hay demasiados clientes para cargarlos todos. Usar la lista paginada.",
+          total,
+        });
+      }
       const clientes = await Cliente.findAll({
         include: [
           { model: SaldoEnvase, as: "saldosEnvase", attributes: ["productoId", "cantidad"] },

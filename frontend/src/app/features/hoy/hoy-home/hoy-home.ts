@@ -116,8 +116,10 @@ export default class HoyHome implements OnInit {
         this.resumen.set(resumen);
         this.cargando.set(false);
       },
-      error: () => {
-        this.error.set('No se pudo cargar el resumen de hoy');
+      error: (err) => {
+        this.error.set(err.status === 413
+          ? 'La ruta de Hoy no puede mostrar todos los clientes de esta carga masiva. La lista paginada de Clientes y las demás pantallas siguen disponibles.'
+          : 'No se pudo cargar el resumen de hoy');
         this.cargando.set(false);
       },
     });
