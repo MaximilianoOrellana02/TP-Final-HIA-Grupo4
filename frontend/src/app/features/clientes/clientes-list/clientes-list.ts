@@ -8,6 +8,7 @@ import { Barrio, DIAS_SEMANA, DiaSemana } from '../../../core/models/barrio.mode
 import { NotificationService } from '../../../core/services/notification.service';
 import { calcularParadas, hoyEnArgentina, restaurantesIncluidosHoy } from '../../../shared/paradas-hoy.util';
 import PagoModal from '../../../shared/pago-modal/pago-modal';
+import { paginasVisibles } from '../../../shared/paginas-visibles.util';
 
 type Filtro = 'todos' | 'deuda' | 'ruta' | 'frecuentes';
 type AccionPrincipal = 'entregar' | 'cobrar' | 'detalle';
@@ -38,8 +39,9 @@ export default class ClientesList implements OnInit {
   restaurandoId = signal<string | null>(null);
   pagina = signal(1);
   totalClientes = signal(0);
-  hayMas = signal(false);
-  cargandoMas = signal(false);
+  limitePagina = signal(25);
+  totalPaginas = computed(() => Math.ceil(this.totalClientes() / this.limitePagina()));
+  paginas = computed(() => paginasVisibles(this.pagina(), this.totalPaginas()));
   private solicitud = 0;
   private temporizadorBusqueda: ReturnType<typeof setTimeout> | null = null;
 
@@ -97,7 +99,6 @@ export default class ClientesList implements OnInit {
     return lista;
   });
   clientesMostrados = computed(() => this.clientesFiltrados());
-  cantidadRestante = computed(() => Math.max(0, this.totalClientes() - this.clientes().length));
 
   ngOnInit() {
     this.cargarClientes();
@@ -109,19 +110,14 @@ export default class ClientesList implements OnInit {
     });
   }
 
-  cargarClientes(agregar = false) {
-    if (agregar && (this.cargandoMas() || !this.hayMas())) return;
+  cargarClientes(page = 1) {
+    if (page < 1 || (page !== 1 && page > this.totalPaginas())) return;
     const solicitud = ++this.solicitud;
-    const page = agregar ? this.pagina() + 1 : 1;
-    if (agregar) this.cargandoMas.set(true);
-    else {
-      this.cargando.set(true);
-      this.error.set(null);
-      this.clientes.set([]);
-      this.actividad.set(new Map());
-      this.deudaVieja.set([]);
-      this.hayMas.set(false);
-    }
+    this.cargando.set(true);
+    this.error.set(null);
+    this.clientes.set([]);
+    this.actividad.set(new Map());
+    this.deudaVieja.set([]);
     this.clienteService.listarPaginado(page, this.busqueda(), {
       archivados: this.viendoArchivados(),
       deuda: !this.viendoArchivados() && this.filtro() === 'deuda',
@@ -129,39 +125,33 @@ export default class ClientesList implements OnInit {
     }).subscribe({
       next: (respuesta) => {
         if (solicitud !== this.solicitud) return;
-        this.clientes.update((actuales) => agregar ? [...actuales, ...respuesta.items] : respuesta.items);
+        this.clientes.set(respuesta.items);
         if (respuesta.items.length) {
           const ids = respuesta.items.map((cliente) => cliente.id);
           this.clienteService.listarDeudaVieja(30, ids).subscribe({
             next: (clientes) => {
               if (solicitud !== this.solicitud) return;
-              this.deudaVieja.update((actual) => [...actual, ...clientes]);
+              this.deudaVieja.set(clientes);
             },
             error: () => {},
           });
           this.clienteService.actividad(ids).subscribe({
             next: ({ clientes }) => {
               if (solicitud !== this.solicitud) return;
-              this.actividad.update((actual) => {
-                const nuevo = new Map(actual);
-                for (const cliente of clientes) nuevo.set(cliente.clienteId, cliente);
-                return nuevo;
-              });
+              this.actividad.set(new Map(clientes.map((cliente) => [cliente.clienteId, cliente])));
             },
             error: () => {},
           });
         }
         this.pagina.set(respuesta.page);
         this.totalClientes.set(respuesta.total);
-        this.hayMas.set(respuesta.hasMore);
+        this.limitePagina.set(respuesta.limit);
         this.cargando.set(false);
-        this.cargandoMas.set(false);
       },
       error: () => {
         if (solicitud !== this.solicitud) return;
         this.error.set('No se pudieron cargar los clientes');
         this.cargando.set(false);
-        this.cargandoMas.set(false);
       },
     });
   }
@@ -211,8 +201,9 @@ export default class ClientesList implements OnInit {
     this.reiniciarPaginado();
   }
 
-  verMas() {
-    this.cargarClientes(true);
+  cambiarPagina(page: number) {
+    if ((page === this.pagina() && !this.error()) || this.cargando()) return;
+    this.cargarClientes(page);
   }
 
   private diasDelCliente(c: Cliente): DiaSemana[] {
