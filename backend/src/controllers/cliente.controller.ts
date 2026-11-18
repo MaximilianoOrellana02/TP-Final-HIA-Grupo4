@@ -280,8 +280,8 @@ export async function listarDeudaVieja(req: AuthRequest, res: Response) {
     const dias = validarDias(req.query.dias);
     const idsParametro = req.query.ids;
     const ids = typeof idsParametro === "string" ? idsParametro.split(",") : [];
-    if (ids.length > 100 || (ids.length && ids.some((id) => !esUuid(id)))) {
-      return res.status(400).json({ error: "ids debe contener hasta 100 UUID validos" });
+    if (!ids.length || ids.length > 100 || ids.some((id) => !esUuid(id))) {
+      return res.status(400).json({ error: "ids debe contener entre 1 y 100 UUID validos" });
     }
     const resultados = await sequelize.query<DeudaCliente>(
       `
@@ -358,8 +358,8 @@ export async function actividadClientes(req: AuthRequest, res: Response) {
     }
     const idsParametro = req.query.ids;
     const ids = typeof idsParametro === "string" ? idsParametro.split(",") : [];
-    if (ids.length > 100 || (ids.length && ids.some((id) => !esUuid(id)))) {
-      return res.status(400).json({ error: "ids debe contener hasta 100 UUID validos" });
+    if (!ids.length || ids.length > 100 || ids.some((id) => !esUuid(id))) {
+      return res.status(400).json({ error: "ids debe contener entre 1 y 100 UUID validos" });
     }
     const filas = await sequelize.query<ActividadFila>(
       `
