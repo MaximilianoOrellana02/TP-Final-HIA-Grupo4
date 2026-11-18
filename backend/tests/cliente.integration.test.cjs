@@ -70,6 +70,21 @@ test('all client routes require authentication', async () => {
     }
 });
 
+test('today route includes scheduled barrios and optional restaurants without loading every client', async () => {
+    const dias = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+    const dia = dias[new Date(fechaComercial() + 'T12:00:00Z').getUTCDay()];
+    const barrio = await Barrio.create({ nombre: 'Ruta ' + randomBytes(4).toString('hex'), diasVisita: [dia] });
+    await cliente.update({ barrioId: barrio.id });
+    const restaurante = await Cliente.create({ nombre: 'Restaurante', apellido: randomBytes(4).toString('hex'), categoria: 'restaurante' });
+    const normal = await request('/clientes/ruta-hoy?page=1');
+    assert.equal(normal.status, 200);
+    assert.ok(normal.body.items.some((c) => c.id === cliente.id));
+    assert.equal(normal.body.items.some((c) => c.id === restaurante.id), false);
+    const ampliada = await request('/clientes/ruta-hoy?page=1&incluirRestaurantes=true');
+    assert.ok(ampliada.body.items.some((c) => c.id === restaurante.id));
+    assert.equal((await request('/clientes/ruta-hoy?page=0')).status, 400);
+});
+
 test('malformed ids return 400 and absent valid ids return 404', async () => {
     for (const [suffix, method] of [['', 'GET'], ['', 'PUT'], ['', 'DELETE'], ['/envases', 'GET'], ['/ubicacion', 'PUT'], ['/visita', 'PUT'], ['/restaurar', 'PATCH']]) assert.equal((await request('/clientes/invalid' + suffix, method)).status, 400);
     assert.equal((await request('/clientes/11111111-1111-4111-8111-111111111111')).status, 404);

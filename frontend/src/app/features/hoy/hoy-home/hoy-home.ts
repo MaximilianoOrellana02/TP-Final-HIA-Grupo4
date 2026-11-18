@@ -43,6 +43,11 @@ export default class HoyHome implements OnInit {
   mostrarDetalleCobrado = signal(false);
   mostrarDetalleEntregados = signal(false);
   terminando = signal(false);
+  totalRuta = signal(0);
+  paginaRuta = signal(1);
+  hayMasRuta = signal(false);
+  cargandoMasRuta = signal(false);
+  private solicitudRuta = 0;
 
   // Buscador: filtra solo las listas; progreso y "Terminar reparto" siguen contando todas las paradas.
   busqueda = signal('');
@@ -50,7 +55,7 @@ export default class HoyHome implements OnInit {
   pendientesFiltradas = computed(() => this.paradasPendientes().filter((c) => this.coincide(c)));
   realizadasFiltradas = computed(() => this.paradasRealizadas().filter((c) => this.coincide(c)));
 
-  private clientesCargados: Cliente[] = [];
+  clientesCargados: Cliente[] = [];
   private barriosCargados: Barrio[] = [];
 
   fechaHoyTexto = new Date().toLocaleDateString('es-AR', {
@@ -81,7 +86,7 @@ export default class HoyHome implements OnInit {
 
   // Se habilita cuando no quedan paradas pendientes; cierra el día y muestra el resumen.
   terminarReparto() {
-    if (this.terminando() || this.paradasPendientes().length > 0) return;
+    if (this.terminando() || this.hayMasRuta() || this.paradasPendientes().length > 0) return;
     this.notificationService.confirmar(
       'Terminar reparto',
       'Se cierra el reparto de hoy y se muestra el resumen del día.',
@@ -102,25 +107,55 @@ export default class HoyHome implements OnInit {
   }
 
   cargar() {
+    const solicitud = ++this.solicitudRuta;
     this.cargando.set(true);
+    this.error.set(null);
+    this.clientesCargados = [];
+    this.hayMasRuta.set(false);
+    this.cargandoMasRuta.set(false);
 
     forkJoin({
-      clientes: this.clienteService.listar(),
+      ruta: this.clienteService.listarRutaHoy(1, this.incluirRestaurantes()),
       barrios: this.barrioService.listar(),
       resumen: this.historialService.resumenHoy(),
     }).subscribe({
-      next: ({ clientes, barrios, resumen }) => {
-        this.clientesCargados = clientes;
+      next: ({ ruta, barrios, resumen }) => {
+        if (solicitud !== this.solicitudRuta) return;
+        this.clientesCargados = ruta.items;
+        this.totalRuta.set(ruta.total);
+        this.paginaRuta.set(ruta.page);
+        this.hayMasRuta.set(ruta.hasMore);
         this.barriosCargados = barrios;
         this.actualizarListado();
         this.resumen.set(resumen);
         this.cargando.set(false);
       },
-      error: (err) => {
-        this.error.set(err.status === 413
-          ? 'La ruta de Hoy no puede mostrar todos los clientes de esta carga masiva. La lista paginada de Clientes y las demás pantallas siguen disponibles.'
-          : 'No se pudo cargar el resumen de hoy');
+      error: () => {
+        if (solicitud !== this.solicitudRuta) return;
+        this.error.set('No se pudo cargar el resumen de hoy');
         this.cargando.set(false);
+      },
+    });
+  }
+
+  cargarMasRuta() {
+    if (!this.hayMasRuta() || this.cargandoMasRuta()) return;
+    const solicitud = this.solicitudRuta;
+    this.cargandoMasRuta.set(true);
+    this.clienteService.listarRutaHoy(this.paginaRuta() + 1, this.incluirRestaurantes()).subscribe({
+      next: (ruta) => {
+        if (solicitud !== this.solicitudRuta) return;
+        this.clientesCargados = [...this.clientesCargados, ...ruta.items];
+        this.paginaRuta.set(ruta.page);
+        this.totalRuta.set(ruta.total);
+        this.hayMasRuta.set(ruta.hasMore);
+        this.cargandoMasRuta.set(false);
+        this.actualizarListado();
+      },
+      error: () => {
+        if (solicitud !== this.solicitudRuta) return;
+        this.cargandoMasRuta.set(false);
+        this.notificationService.mostrar('No se pudieron cargar más paradas. Intentá nuevamente.');
       },
     });
   }
@@ -129,7 +164,7 @@ export default class HoyHome implements OnInit {
     const nuevoEstado = !this.incluirRestaurantes();
     this.incluirRestaurantes.set(nuevoEstado);
     this.guardarEstadoRestaurantes(nuevoEstado);
-    this.actualizarListado();
+    this.cargar();
   }
 
   marcarVisitado(cliente: Cliente) {

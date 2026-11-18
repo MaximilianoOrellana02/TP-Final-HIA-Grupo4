@@ -76,6 +76,9 @@
             <span class="tile-label">Progreso</span>
             <span class="tile-sub"><strong class="tile-numero">{{ visitadasHoy() }}</strong> de {{ paradasHoy().length }}
                 paradas</span>
+            @if (hayMasRuta()) {
+            <span class="tile-sub">Progreso parcial: {{ clientesCargados.length }} de {{ totalRuta() }} clientes cargados</span>
+            }
             <div class="progreso-track">
                 <div class="progreso-fill" [style.width.%]="progresoPorcentaje()"></div>
             </div>
@@ -88,10 +91,12 @@
 
     @if (repartoService.comenzadoHoy() && !repartoService.terminadoHoy()) {
     <button type="button" class="btn-terminar-reparto" (click)="terminarReparto()"
-        [disabled]="paradasPendientes().length > 0 || terminando()">
+        [disabled]="paradasPendientes().length > 0 || hayMasRuta() || terminando()">
         <i class="bi bi-flag" aria-hidden="true"></i>
         @if (terminando()) {
         Terminando…
+        } @else if (hayMasRuta()) {
+        Cargar todas las paradas antes de terminar
         } @else if (paradasPendientes().length > 0) {
         <span>Terminar reparto · <strong>te {{ paradasPendientes().length === 1 ? 'queda 1 parada' : 'quedan ' + paradasPendientes().length + ' paradas' }}</strong></span>
         } @else {
@@ -160,6 +165,12 @@
         <h2>Próximas paradas</h2>
         <span class="paradas-count">{{ paradasPendientes().length }} pendientes</span>
     </div>
+    @if (hayMasRuta()) {
+    <p>Mostrando {{ clientesCargados.length }} de {{ totalRuta() }} clientes de la ruta y visitados hoy.</p>
+    <button type="button" class="btn-terminar-reparto" [disabled]="cargandoMasRuta()" (click)="cargarMasRuta()">
+        {{ cargandoMasRuta() ? 'Cargando paradas…' : 'Cargar más paradas' }}
+    </button>
+    }
 
     @if (paradasHoy().length === 0) {
     <div class="state-message empty">

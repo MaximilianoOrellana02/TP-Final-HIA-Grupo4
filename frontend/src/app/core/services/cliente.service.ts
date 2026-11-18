@@ -36,6 +36,15 @@ export class ClienteService {
     })));
   }
 
+  listarRutaHoy(page: number, incluirRestaurantes: boolean): Observable<{ items: Cliente[]; page: number; total: number; hasMore: boolean }> {
+    return this.http.get<{ items: Cliente[]; page: number; total: number; hasMore: boolean }>(
+      `${this.baseUrl}/ruta-hoy`, { params: { page, incluirRestaurantes } },
+    ).pipe(map((resultado) => ({
+      ...resultado,
+      items: resultado.items.map((c) => this.normalizarCliente(c)),
+    })));
+  }
+
   listar(): Observable<Cliente[]> {
     return this.http
       .get<Cliente[]>(this.baseUrl)

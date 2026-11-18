@@ -106,6 +106,39 @@ export async function listarClientes(req: AuthRequest, res: Response) {
   }
 }
 
+// Misma seleccion que calcularParadas en el frontend, pero paginada en PostgreSQL.
+export async function listarClientesDeHoy(req: AuthRequest, res: Response) {
+  try {
+    const page = Number(req.query.page ?? 1);
+    if (!Number.isSafeInteger(page) || page < 1) {
+      return res.status(400).json({ error: "page debe ser positivo" });
+    }
+    const incluirRestaurantes = req.query.incluirRestaurantes === "true";
+    const fecha = fechaComercial();
+    const dias = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
+    const dia = dias[new Date(`${fecha}T12:00:00Z`).getUTCDay()];
+    const where = `c."deletedAt" IS NULL AND (
+      b."diasVisita"::jsonb ? :dia OR
+      (:incluirRestaurantes AND c.categoria = 'restaurante') OR
+      c."ultimaVisitaFecha" = :fecha
+    )`;
+    const replacements = { dia, incluirRestaurantes, fecha };
+    const [conteo] = await sequelize.query<{ total: number }>(
+      `SELECT count(*)::integer AS total FROM clientes c LEFT JOIN barrios b ON b.id = c."barrioId" WHERE ${where}`,
+      { type: QueryTypes.SELECT, replacements },
+    );
+    const limit = 100;
+    const items = await sequelize.query<Cliente>(
+      `SELECT c.* FROM clientes c LEFT JOIN barrios b ON b.id = c."barrioId"
+       WHERE ${where} ORDER BY c.apellido, c.nombre, c.id LIMIT :limit OFFSET :offset`,
+      { type: QueryTypes.SELECT, replacements: { ...replacements, limit, offset: (page - 1) * limit } },
+    );
+    return res.json({ items, page, total: conteo.total, hasMore: page * limit < conteo.total });
+  } catch (error) {
+    return responderErrorCliente(res, error, "Error al listar la ruta de hoy");
+  }
+}
+
 export async function listarDesactivados(req: AuthRequest, res: Response) {
   try {
     const clientes = await Cliente.findAll({
