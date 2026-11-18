@@ -80,14 +80,22 @@ export class ClienteService {
     return this.http.put<Cliente>(`${this.baseUrl}/${id}/visita`, { visitado });
   }
 
-  listarDeudaVieja(dias: number = 30): Observable<ClienteDeudaVieja[]> {
+  listarDeudaVieja(dias: number = 30, ids: string[] = []): Observable<ClienteDeudaVieja[]> {
     return this.http.get<ClienteDeudaVieja[]>(`${this.baseUrl}/deuda-vieja`, {
-      params: { dias },
+      params: { dias, ...(ids.length ? { ids: ids.join(',') } : {}) },
     });
   }
 
-  actividad(): Observable<ActividadClientes> {
-    return this.http.get<ActividadClientes>(`${this.baseUrl}/actividad`);
+  actividad(ids: string[]): Observable<ActividadClientes> {
+    return this.http.get<ActividadClientes>(`${this.baseUrl}/actividad`, {
+      params: { ids: ids.join(',') },
+    });
+  }
+
+  contarActivosMes(): Observable<ActividadClientes> {
+    return this.http.get<ActividadClientes>(`${this.baseUrl}/actividad`, {
+      params: { soloTotal: true },
+    });
   }
 
   restaurarCliente(id: string): Observable<any> {

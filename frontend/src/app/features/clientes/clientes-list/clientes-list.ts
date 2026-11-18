@@ -103,12 +103,8 @@ export default class ClientesList implements OnInit {
     this.cargarClientes();
     this.barrioService.listar().subscribe({ next: (data) => this.barrios.set(data) });
     // Lo que sigue enriquece las tarjetas; si falla, la lista se muestra igual.
-    this.clienteService.listarDeudaVieja().subscribe({ next: (data) => this.deudaVieja.set(data), error: () => {} });
-    this.clienteService.actividad().subscribe({
-      next: ({ activosMes, clientes }) => {
-        this.activosMes.set(activosMes);
-        this.actividad.set(new Map(clientes.map((a) => [a.clienteId, a])));
-      },
+    this.clienteService.contarActivosMes().subscribe({
+      next: ({ activosMes }) => this.activosMes.set(activosMes),
       error: () => {},
     });
   }
@@ -122,6 +118,8 @@ export default class ClientesList implements OnInit {
       this.cargando.set(true);
       this.error.set(null);
       this.clientes.set([]);
+      this.actividad.set(new Map());
+      this.deudaVieja.set([]);
       this.hayMas.set(false);
     }
     this.clienteService.listarPaginado(page, this.busqueda(), {
@@ -132,6 +130,27 @@ export default class ClientesList implements OnInit {
       next: (respuesta) => {
         if (solicitud !== this.solicitud) return;
         this.clientes.update((actuales) => agregar ? [...actuales, ...respuesta.items] : respuesta.items);
+        if (respuesta.items.length) {
+          const ids = respuesta.items.map((cliente) => cliente.id);
+          this.clienteService.listarDeudaVieja(30, ids).subscribe({
+            next: (clientes) => {
+              if (solicitud !== this.solicitud) return;
+              this.deudaVieja.update((actual) => [...actual, ...clientes]);
+            },
+            error: () => {},
+          });
+          this.clienteService.actividad(ids).subscribe({
+            next: ({ clientes }) => {
+              if (solicitud !== this.solicitud) return;
+              this.actividad.update((actual) => {
+                const nuevo = new Map(actual);
+                for (const cliente of clientes) nuevo.set(cliente.clienteId, cliente);
+                return nuevo;
+              });
+            },
+            error: () => {},
+          });
+        }
         this.pagina.set(respuesta.page);
         this.totalClientes.set(respuesta.total);
         this.hayMas.set(respuesta.hasMore);
