@@ -1,0 +1,46 @@
+# Override para desarrollo local con rebuild automático (`docker compose watch`).
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --watch
+
+services:
+  backend:
+    image: soderia-backend:local
+    build: ./backend
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    develop:
+      watch:
+        - action: rebuild
+          path: ./backend/src
+        - action: rebuild
+          path: ./backend/package.json
+        - action: rebuild
+          path: ./backend/package-lock.json
+        - action: rebuild
+          path: ./backend/tsconfig.json
+        - action: rebuild
+          path: ./backend/Dockerfile
+
+  frontend:
+    image: soderia-frontend:local
+    build: ./frontend
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    develop:
+      watch:
+        - action: rebuild
+          path: ./frontend/src
+        - action: rebuild
+          path: ./frontend/package.json
+        - action: rebuild
+          path: ./frontend/package-lock.json
+        - action: rebuild
+          path: ./frontend/angular.json
+        - action: rebuild
+          path: ./frontend/nginx.conf
+        - action: rebuild
+          path: ./frontend/Dockerfile
+
+  watchtower:
+    profiles:
+      - disabled
