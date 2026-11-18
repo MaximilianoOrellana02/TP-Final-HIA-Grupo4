@@ -16,8 +16,7 @@ services:
   # =========================================================================
 
   backend:
-    image: ghcr.io/maximilianoorellana02/soderia-backend:latest
-    build: ./backend
+    image: ghcr.io/maximilianoorellana02/soderia-backend:${IMAGE_TAG:-develop}
     restart: unless-stopped
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
@@ -45,8 +44,7 @@ services:
       - red_cluster
 
   frontend:
-    image: ghcr.io/maximilianoorellana02/soderia-frontend:latest
-    build: ./frontend
+    image: ghcr.io/maximilianoorellana02/soderia-frontend:${IMAGE_TAG:-develop}
     restart: unless-stopped
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
@@ -185,6 +183,7 @@ services:
   nodo1:
     build: ./cluster/scripts
     container_name: postgres_nodo1
+    shm_size: 512mb
     restart: unless-stopped
     environment:
       - PATRONI_NAME=nodo1
@@ -219,6 +218,7 @@ services:
   nodo2:
     build: ./cluster/scripts
     container_name: postgres_nodo2
+    shm_size: 512mb
     restart: unless-stopped
     environment:
       - PATRONI_NAME=nodo2
@@ -252,6 +252,7 @@ services:
   nodo3:
     build: ./cluster/scripts
     container_name: postgres_nodo3
+    shm_size: 512mb
     restart: unless-stopped
     environment:
       - PATRONI_NAME=nodo3
