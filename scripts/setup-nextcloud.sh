@@ -56,8 +56,9 @@ crear_usuario "n8n_bot" "automatizacion" "Bot Automatizacion n8n" "${NEXTCLOUD_N
 FOLDER_NAME="Soderia-TP-Final"
 FOLDER_ID="$(occ groupfolders:list --output=json | php -r '
   $d = json_decode(stream_get_contents(STDIN), true) ?: [];
-  foreach ($d as $id => $f) {
-    if (($f["mount_point"] ?? "") === $argv[1]) { echo $id; exit; }
+  foreach ($d as $key => $f) {
+    $mp = $f["mountPoint"] ?? $f["mount_point"] ?? "";
+    if ($mp === $argv[1]) { echo ($f["id"] ?? $key); exit; }
   }
 ' "$FOLDER_NAME")"
 
@@ -66,17 +67,25 @@ if [ -z "$FOLDER_ID" ]; then
 fi
 
 echo "Configurando permisos en carpeta compartida '$FOLDER_NAME' (ID: $FOLDER_ID)..."
-occ groupfolders:group "$FOLDER_ID" equipo read write create delete share
-occ groupfolders:group "$FOLDER_ID" automatizacion read write create
+occ groupfolders:group "$FOLDER_ID" equipo read write delete share
+occ groupfolders:group "$FOLDER_ID" automatizacion read write
 occ groupfolders:group "$FOLDER_ID" auditores read
 
-BASE_DIR="/var/www/html/data/__groupfolders/$FOLDER_ID"
-docker exec -u www-data "$CONTAINER" mkdir -p \
-  "$BASE_DIR/01-Documentacion-Tecnica" \
-  "$BASE_DIR/02-Informes-Pruebas" \
-  "$BASE_DIR/03-Configuraciones-Infra" \
-  "$BASE_DIR/04-Reportes-n8n" \
-  "$BASE_DIR/05-Evidencias"
-
-occ groupfolders:scan "$FOLDER_ID"
+EQUIPO_PASS="${NEXTCLOUD_EQUIPO_PASS:-EquipoSoderia2026!}"
+docker exec -i -e EQUIPO_PASS="$EQUIPO_PASS" -u www-data "$CONTAINER" php <<'PHP'
+<?php
+$pass = getenv('EQUIPO_PASS');
+$dirs = ['01-Documentacion-Tecnica','02-Informes-Pruebas','03-Configuraciones-Infra','04-Reportes-n8n','05-Evidencias'];
+foreach ($dirs as $d) {
+  $c = curl_init("http://127.0.0.1/remote.php/dav/files/equipo_dev/Soderia-TP-Final/$d");
+  curl_setopt_array($c, [
+    CURLOPT_CUSTOMREQUEST => 'MKCOL',
+    CURLOPT_USERPWD => "equipo_dev:$pass",
+    CURLOPT_RETURNTRANSFER => true,
+  ]);
+  curl_exec($c);
+  $code = curl_getinfo($c, CURLINFO_HTTP_CODE);
+  if ($code !== 201 && $code !== 405) { fwrite(STDERR, "Error MKCOL $d: HTTP $code\n"); exit(1); }
+}
+PHP
 echo "Listo: estructura y permisos de Nextcloud configurados."

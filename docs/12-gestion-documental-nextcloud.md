@@ -30,8 +30,8 @@
 | Grupo | Usuario ejemplo | Permisos asignados | Alcance |
 | --- | --- | --- | --- |
 | `admin` *(administrador)* | `${NEXTCLOUD_ADMIN_USER}` | Control total | Administración de instancia, apps y cuotas |
-| `equipo` | `equipo_dev` | `read`, `write`, `create`, `delete`, `share` | Carga, edición y versionado de entregables |
-| `automatizacion` | `n8n_bot` | `read`, `write`, `create` | Subida automática de reportes desde `n8n` (sin borrar ni re-compartir) |
+| `equipo` | `equipo_dev` | `read`, `write`, `delete`, `share` | Carga, edición y versionado de entregables |
+| `automatizacion` | `n8n_bot` | `read`, `write` | Subida automática de reportes desde `n8n` (sin borrar ni re-compartir) |
 | `auditores` | `auditor` | `read` | Consulta de documentación y evidencias en solo lectura |
 
 ## 5. Política de protección de secretos e integración con n8n
