@@ -10,6 +10,7 @@ RUN npx ng build --configuration docker
 
 # ---------- Runtime: nginx sirve los estáticos y hace proxy de /api al backend ----------
 FROM nginx:1.27-alpine
+RUN apk upgrade --no-cache
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist/soderia-frontend/browser /usr/share/nginx/html
 EXPOSE 80
