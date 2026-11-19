@@ -73,6 +73,10 @@ aplicación se declaran en el mismo archivo y se resuelven entre sí por nombre 
 | Grafana | <http://localhost:3000> (admin / admin) |
 | HAProxy Stats | <http://localhost:7000/> |
 | pgAdmin | <http://127.0.0.1:5050> |
+| n8n Editor | <http://localhost:5678> |
+| MantisBT | <http://localhost:8989> |
+| Mailpit (Correo de Alertas) | <http://localhost:8026> |
+| Nextcloud (Informes RAG) | <http://localhost:8085> (admin / admin123) |
 | Prometheus | solo interno: `http://prometheus:9090` dentro de `red_cluster` |
 | PostgreSQL (HAProxy) | solo interno: `haproxy:5432` (o el alias `db:5432`) |
 
@@ -148,6 +152,16 @@ docker compose --profile incidencias up -d mantisbt
 En una instalación nueva, abrir `http://localhost:8989/admin/install.php` y completar el instalador con el servidor `mantis-db`, la base `bugtracker`, el usuario `mantisbt` y las claves del `.env` local. La página de ingreso puede devolver un error hasta que el instalador cree las tablas. Al terminar, cambiar `MANTIS_ENABLE_ADMIN` a `0` y repetir el comando anterior; se conserva el volumen de datos y se oculta el instalador. Al ingresar por primera vez, cambiar la clave inicial de la cuenta administradora.
 
 Mantis se abre en `http://localhost:8989` y el correo de prueba en `http://localhost:8026`. Mailpit conserva los mensajes dentro del entorno local: las invitaciones y avisos no llegan a los correos reales de los integrantes. Para entregarlos, se pueden completar las variables `MANTIS_SMTP_*` y `MANTIS_FROM_EMAIL` del `.env` con un servidor de correo autorizado. Las cuentas, categorías e incidencias del punto 11 se crearán en esta instalación nueva.
+
+## Automatización Operativa y Flujos n8n
+
+El entorno cuenta con **n8n** (`http://localhost:5678`, perfil `automatizacion`) para la orquestación avanzada de operaciones y observabilidad:
+
+1. **Flujo 1: Alertas Automáticas de Infraestructura:** Deduplicación inteligente, ciclo de vida completo (`firing`/`resolved`), auto-resolución de tickets en MantisBT, telemetría en vivo desde Prometheus, asignación preventiva por matriz de roles y notificaciones interactivas.
+2. **Flujo 2: Verificación de Backups de PostgreSQL:** Validación diaria del estado, tamaño y antigüedad de los backups en `/backups`, con emisión de incidencias en MantisBT y alertas ante anomalías.
+3. **Flujo 3: Informe de Rendimiento con RAG e IA Generativa:** Recolección de telemetría de Prometheus combinada con manuales operativos en PostgreSQL (`infrastructure_runbooks`), redacción automatizada de reportes técnicos con Google Gemini y almacenamiento en Nextcloud (`http://localhost:8085`).
+
+Para la guía detallada de arquitectura, variables y pasos de verificación, consultar la documentación en [docs/12-automatizacion-flujos-n8n.md](docs/12-automatizacion-flujos-n8n.md).
 
 ## Modelo de datos
 
