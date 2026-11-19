@@ -183,8 +183,72 @@ Con el entorno levantado (`docker compose up -d --build`), se pueden comprobar l
    python -c "print('{\"x\":\"' + 'a'*120000 + '\"}')" | curl -i -X POST http://localhost:8080/api/usuarios/login -H "Content-Type: application/json" -d @-
    ```
 
-3. **Verificar que el panel de HAProxy (`:7000`) escucha únicamente en loopback (`127.0.0.1`) y que PostgreSQL (`:5432`) no está expuesto al host:**
+3. **Verificar que el panel de HAProxy (`:7000`), Grafana (`:3000`) y Prometheus (`:9090`) escuchan únicamente en loopback (`127.0.0.1`) y que PostgreSQL (`:5432`) no está expuesto al host:**
 
    ```bash
    docker compose ps --format "table {{.Name}}\t{{.Ports}}"
    ```
+
+---
+
+## 5. Matriz de Amenazas (Punto 14)
+
+| Amenaza | Activo Afectado | Riesgo | Control Aplicado / Mitigación |
+| :--- | :--- | :--- | :--- |
+| **DDoS Capa 7 / Slowloris** | `frontend` (Nginx), `backend` | Alto | `rateLimit` 120 req/min en `/api`, `limit: "100kb"` JSON, timeouts `10s` y `client_max_body_size 1m` en Nginx. |
+| **Robo / Fuga de Credenciales** | `.env`, Patroni, `JWT_SECRET`, Nextcloud | Crítico | Secretos fuera de Git (`.gitignore`), parametrización en `docker-compose.yml` y `.env.example`, `trust proxy` y JWT. |
+| **Ransomware / Pérdida de Datos** | Clúster PostgreSQL, `./datos/backups` | Crítico | Red aislada `red_cluster` sin puerto `5432` al host, replicación Patroni 3 nodos + servicio `backup` (`pg_dump`). |
+| **Vulnerabilidades en Dependencias / Imágenes** | `backend`, `frontend` | Alto | Escaneo con **Trivy** (`aquasec/trivy`), `apk upgrade --no-cache` en `frontend/Dockerfile` y `npm audit --omit=dev` en CI. |
+| **Ataques a Cadena de Suministro (CI/CD)** | `.github/workflows/ci-cd.yml`, GHCR | Alto | `npm ci` con lockfiles, imágenes auxiliares fijadas por `@sha256` (`mantis-*`), `:latest` restringido a `main`. |
+| **Inyección SQL (SQLi)** | API REST / PostgreSQL | Alto | Consultas parametrizadas vía Sequelize ORM y validación de entradas/UUIDs en controladores. |
+| **Fallas de Autorización (IDOR / BOLA)** | Endpoints REST | Alto | Middleware JWT en rutas protegidas y validación de rol (`admin` / `repartidor`). |
+| **Abuso de API y Webhooks** | `/api/*`, webhooks `n8n` / Alertmanager | Medio | Rate limiting global y específico de auth, basic auth por archivo secreto en Alertmanager -> `n8n`. |
+| **Riesgos en Sistemas de IA** | Flujos IA en `n8n` / asistentes | Medio | Sin secretos en prompts ni en JSON exportados; ejecución de flujos restringida a red `interna` / `red_cluster`. |
+
+---
+
+## 6. Escaneo de Vulnerabilidades y Remediación (`Trivy` + `npm audit`)
+
+### 6.1. Escaneo de Imágenes Docker con Trivy (`--severity HIGH,CRITICAL`)
+* **`soderia-backend:local` (`node:22-alpine` / Alpine `3.24.4`):** **0 vulnerabilidades** `HIGH`/`CRITICAL` en sistema base.
+* **`soderia-frontend:local` (`nginx:1.27-alpine` / Alpine `3.21.3`):**
+  * **Antes:** **70 vulnerabilidades** (`67 HIGH`, `3 CRITICAL`, incluyendo `brotli-libs`, `c-ares`, `curl`).
+  * **Corrección aplicada:** se incorporó `RUN apk upgrade --no-cache` en `frontend/Dockerfile`.
+  * **Después (re-escaneo):** **0 vulnerabilidades** `HIGH`/`CRITICAL` (`Alpine 3.21.10`).
+
+### 6.2. Auditoría de Dependencias Node.js (`npm audit --omit=dev`)
+* **Backend:** `8` hallazgos (`5 moderate`, `2 high`, `1 critical`).
+* **Frontend:** `14` hallazgos (`7 moderate`, `5 high`, `2 critical`).
+* Se integró `npm audit --omit=dev --audit-level=high` en `.github/workflows/ci-cd.yml` para visibilidad continua en cada PR/push.
+
+---
+
+## 7. Resultados de Pruebas Controladas (Ejecución Real)
+
+Pruebas ejecutadas sobre el stack levantado (`http://127.0.0.1:8080`):
+
+1. **Cabeceras de seguridad (`GET /` y `GET /api/health`):**
+   * `Server: nginx` (sin versión), ausencia de `X-Powered-By`.
+   * Presentes: `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`, `Cache-Control: no-store` en `/index.html`, y `RateLimit: "120-in-1min"` en `/api/health`.
+2. **Acceso sin autenticación (`GET /api/clientes`):** `HTTP 401`.
+3. **Payload JSON excedido (`120 KB` a `POST /api/usuarios/login`):** `HTTP 413`.
+4. **Ráfaga DDoS controlada (`125` peticiones seguidas a `/api/health`):** `118` respuestas `HTTP 200` y `7` respuestas bloqueadas con `HTTP 429`.
+5. **Exposición de puertos (`docker compose ps`):**
+   * `grafana_dashboard`: `127.0.0.1:3000->3000/tcp`
+   * `haproxy_router`: `127.0.0.1:7000->7000/tcp`
+   * `prometheus_server`: `127.0.0.1:9090->9090/tcp`
+   * `postgres_nodo1..3` (`5432/tcp`) y `soderia-backend-1` (`3001/tcp`): sin publicación al host.
+   * `soderia-frontend-1`: único puerto web expuesto (`8080->80/tcp`).
+
+---
+
+## 8. Procedimiento de Respuesta y Recuperación ante Incidentes
+
+1. **Detección y Alerta:** Prometheus evalúa reglas (`alert.rules.yml`), Alertmanager dispara alerta hacia `n8n` (perfil `automatizacion`), donde se registra la incidencia en MantisBT y se notifica al responsable.
+2. **Contención:**
+   * Ante abuso de tráfico o compromiso de contenedor: aislar el servicio afectado (`docker compose stop <servicio>`) o cortar el túnel público (`tailscale funnel off`).
+   * Ante sospecha de fuga de credenciales: rotar de inmediato `JWT_SECRET`, `DB_PASSWORD`, `PATRONI_*_PASSWORD` y `NEXTCLOUD_*_PASSWORD` en `.env`, y recrear contenedores (`docker compose up -d`).
+3. **Erradicación y Recuperación:**
+   * Reconstruir imágenes limpias (`docker compose -f docker-compose.yml -f docker-compose.local.yml build --no-cache`) o hacer pull de digest verificado desde GHCR.
+   * En caso de corrupción o ransomware en BD: verificar estado del clúster (`patronictl list`) o restaurar desde `./datos/backups/*.dump` en instancia aislada antes de reabrir el acceso.
+4. **Post-Incidente:** Documentar causa raíz y cierre de ticket en MantisBT.

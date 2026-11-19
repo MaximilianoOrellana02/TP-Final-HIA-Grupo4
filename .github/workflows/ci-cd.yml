@@ -41,6 +41,9 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      - name: Auditar dependencias de produccion
+        run: npm audit --omit=dev --audit-level=high || true
+
       - name: Compilar TypeScript
         run: npm run build
 
@@ -66,6 +69,9 @@ jobs:
 
       - name: Instalar dependencias
         run: npm ci
+
+      - name: Auditar dependencias de produccion
+        run: npm audit --omit=dev --audit-level=high || true
 
       - name: Compilar Angular (configuracion docker)
         run: npx ng build --configuration docker
