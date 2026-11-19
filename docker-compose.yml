@@ -145,6 +145,7 @@ services:
         trap 'rm -f "$$backup_tmp"' EXIT
         pg_dump --format=custom --file="$$backup_tmp"
         mv "$$backup_tmp" "$$backup_tmp.dump"
+        chmod 644 "$$backup_tmp.dump" 2>/dev/null || true
         printf 'Backup guardado en %s\n' "$$backup_tmp.dump"
     volumes:
       # Persistencia dentro del proyecto.
@@ -412,7 +413,7 @@ services:
       NODE_FUNCTION_ALLOW_BUILTIN: "fs,path"
     volumes:
       - n8n_data:/home/node/.n8n
-      - ./backups:/backups:ro
+      - ./datos/backups:/backups:ro
     networks:
       - red_cluster
       - interna

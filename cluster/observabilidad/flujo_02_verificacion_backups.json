@@ -1,1 +1,658 @@
-[{"updatedAt":"2026-11-19T01:46:22.329Z","createdAt":"2026-11-18T23:19:58.118Z","id":"KmBG5FtntcCHYXoo","name":"02 - Verificación de Backups de PostgreSQL","description":null,"active":true,"isArchived":false,"nodes":[{"parameters":{"rule":{"interval":[{"field":"hours","hoursInterval":24}]}},"id":"abf0f5f3-a79b-4a5e-9b9e-5a1e7be7b41b","name":"Ejecución Programada (Diaria)","type":"n8n-nodes-base.scheduleTrigger","typeVersion":1.2,"position":[-576,-144]},{"parameters":{"jsCode":"const fs = require('fs');\nconst backupPath = '/backups';\n\nlet isBackupValid = false;\nlet statusMessage = '';\nlet latestFile = 'N/A';\nlet fileSizeMB = '0';\nlet fileAgeHours = '999';\n\ntry {\n  if (fs.existsSync(backupPath)) {\n    const files = fs.readdirSync(backupPath).filter(f => f.endsWith('.dump') || f.endsWith('.sql'));\n    if (files.length > 0) {\n      const stats = files.map(file => {\n        const stat = fs.statSync(`${backupPath}/${file}`);\n        return { file, mtime: stat.mtime, size: stat.size };\n      }).sort((a, b) => b.mtime - a.mtime);\n\n      const latest = stats[0];\n      latestFile = latest.file;\n      fileSizeMB = (latest.size / (1024 * 1024)).toFixed(2);\n      fileAgeHours = ((new Date() - new Date(latest.mtime)) / (1000 * 60 * 60)).toFixed(2);\n\n      if (parseFloat(fileAgeHours) <= 25 && latest.size > 0) {\n        isBackupValid = true;\n        statusMessage = `Backup correcto: ${latestFile} (${fileSizeMB} MB, generado hace ${fileAgeHours}hs).`;\n      } else {\n        statusMessage = `ALERTA: El backup ${latestFile} está desactualizado (${fileAgeHours}hs) o corrupto.`;\n      }\n    } else {\n      statusMessage = 'ALERTA CRÍTICA: No se encontraron archivos de backup (.dump / .sql) en /backups.';\n    }\n  } else {\n    statusMessage = 'ALERTA CRÍTICA: El directorio /backups no existe o no está montado en n8n.';\n  }\n} catch (error) {\n  statusMessage = `Error al verificar backups: ${error.message}`;\n}\n\nreturn [{\n  json: {\n    isBackupValid,\n    statusMessage,\n    latestFile,\n    fileSizeMB,\n    fileAgeHours,\n    alertname: 'PostgresBackupVerification',\n    severity: isBackupValid ? 'info' : 'critical',\n    mantisPriority: 'high',\n    mantisSeverity: 'major'\n  }\n}];"},"id":"827d9e33-e995-43cf-8b8a-a374d91cc573","name":"Verificar Archivo de Backup","type":"n8n-nodes-base.code","typeVersion":2,"position":[-352,-144]},{"parameters":{"conditions":{"boolean":[{"value1":"={{ $json.isBackupValid }}","value2":true}]}},"id":"3a4aaa96-636d-46bb-b543-4ce3af2b56bc","name":"¿Backup Válido?","type":"n8n-nodes-base.if","typeVersion":1,"position":[-128,-144]},{"parameters":{"method":"POST","url":"http://mantisbt/api/rest/issues","sendHeaders":true,"headerParameters":{"parameters":[{"name":"Authorization","value":"MT1giXS5LfS1aj18uVzhfyIkJ5SDvzFM"},{"name":"Content-Type","value":"application/json"}]},"sendBody":true,"specifyBody":"json","jsonBody":"={{ {\n  \"summary\": \"[ALERTA BACKUP] Fallo en verificación periódica de PostgreSQL\",\n  \"description\": $json.statusMessage,\n  \"project\": { \"id\": 1 },\n  \"category\": { \"name\": \"Infraestructura\" },\n  \"priority\": { \"name\": \"high\" },\n  \"severity\": { \"name\": \"major\" }\n} }}","options":{}},"id":"a2300488-c637-4173-a3f1-ee56abe36102","name":"Crear Ticket MantisBT (Fallo)","type":"n8n-nodes-base.httpRequest","typeVersion":4.1,"position":[112,-16]},{"parameters":{"fromEmail":"alertas@soderia.local","toEmail":"operaciones@soderia.local","subject":"=[ALERTA BACKUP] Falla en la copia de seguridad de PostgreSQL","text":"={{ $node[\"Verificar Archivo de Backup\"].json.statusMessage }}\n\nPor favor revisar los servicios de backup en el cluster de PostgreSQL.","options":{}},"id":"2c684b80-d873-4193-be3d-6003b090b3e4","name":"Notificar Mailpit (Fallo)","type":"n8n-nodes-base.emailSend","typeVersion":2,"position":[320,-16],"webhookId":"d8bfaf7b-34a9-42ba-852c-9e1219591e78","credentials":{"smtp":{"id":"XvYaqxpH3aTt2CJ4","name":"SMTP account"}}},{"parameters":{"operation":"executeQuery","query":"INSERT INTO public.n8n_execution_logs (\n    workflow_name,\n    execution_id,\n    alert_name,\n    severity,\n    status,\n    details\n) VALUES (\n    '02 - Verificación de Backups de PostgreSQL',\n    '{{ $execution.id }}',\n    '{{ $node[\"Verificar Archivo de Backup\"].json.alertname }}',\n    '{{ $node[\"Verificar Archivo de Backup\"].json.severity }}',\n    '{{ $node[\"Verificar Archivo de Backup\"].json.isBackupValid ? \"SUCCESS\" : \"FAILED\" }}',\n    '{{ $node[\"Verificar Archivo de Backup\"].json.statusMessage }}'\n);","options":{}},"id":"54eeed03-7b7e-420c-9e63-6a2f009bc4f6","name":"Registrar Auditoría Postgres","type":"n8n-nodes-base.postgres","typeVersion":2.4,"position":[560,-144],"credentials":{"postgres":{"id":"jFvi9wNotxhtrCpk","name":"Postgres account"}}}],"connections":{"Ejecución Programada (Diaria)":{"main":[[{"node":"Verificar Archivo de Backup","type":"main","index":0}]]},"Verificar Archivo de Backup":{"main":[[{"node":"¿Backup Válido?","type":"main","index":0}]]},"¿Backup Válido?":{"main":[[{"node":"Registrar Auditoría Postgres","type":"main","index":0}],[{"node":"Crear Ticket MantisBT (Fallo)","type":"main","index":0}]]},"Crear Ticket MantisBT (Fallo)":{"main":[[{"node":"Notificar Mailpit (Fallo)","type":"main","index":0}]]},"Notificar Mailpit (Fallo)":{"main":[[{"node":"Registrar Auditoría Postgres","type":"main","index":0}]]}},"settings":{"executionOrder":"v1","binaryMode":"separate","availableInMCP":true,"timeSavedMode":"fixed","errorWorkflow":"bZtx8WLmSD4vGedi","callerPolicy":"workflowsFromSameOwner"},"staticData":{"node:Ejecución Programada (Diaria)":{"recurrenceRules":[null],"recurrenceRuleSignatures":["hours:24"]}},"meta":null,"nodeGroups":[],"pinData":{},"versionId":"fb078ef0-f64e-4308-b324-0f0c20a1a5f0","activeVersionId":"fb078ef0-f64e-4308-b324-0f0c20a1a5f0","versionCounter":3,"triggerCount":1,"sourceWorkflowId":null,"tags":[],"shared":[{"updatedAt":"2026-11-18T23:19:58.122Z","createdAt":"2026-11-18T23:19:58.122Z","role":"workflow:owner","workflowId":"KmBG5FtntcCHYXoo","projectId":"JAScrgV9pshmtZx7","project":{"updatedAt":"2026-11-18T00:22:01.791Z","createdAt":"2026-11-18T00:18:06.166Z","id":"JAScrgV9pshmtZx7","name":"christian guari <christianguari@gmail.com>","type":"personal","icon":null,"description":null,"customTelemetryTags":[],"creatorId":"d0270a38-a821-4663-8783-45aec192b682"}}],"versionMetadata":{"name":"Version fb078ef0","description":""}}]
+[
+  {
+    "updatedAt": "2026-11-19 16:12:54",
+    "createdAt": "2026-11-18 23:19:58.118",
+    "id": "KmBG5FtntcCHYXoo",
+    "name": "02 - Verificación de Backups de PostgreSQL",
+    "active": true,
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "hours",
+                "hoursInterval": 24
+              }
+            ]
+          }
+        },
+        "id": "abf0f5f3-a79b-4a5e-9b9e-5a1e7be7b41b",
+        "name": "Ejecución Programada (Diaria)",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          -800,
+          -80
+        ]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "verificar-backups",
+          "responseMode": "lastNode",
+          "options": {}
+        },
+        "id": "3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f",
+        "name": "Webhook Verificación Bajo Demanda",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1.1,
+        "position": [
+          -800,
+          100
+        ],
+        "webhookId": "verificar-backups"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT pg_size_pretty(pg_database_size('soderia')) AS db_size_pretty, pg_database_size('soderia') AS db_size_bytes;",
+          "options": {}
+        },
+        "id": "1c2d3e4f-5a6b-7c8d-9e0f-1a2b3c4d5e6f",
+        "name": "Consultar Tamaño DB Postgres",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          -580,
+          0
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "jFvi9wNotxhtrCpk",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "http://mantisbt/api/rest/issues?project_id=1&page_size=50",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "MT1giXS5LfS1aj18uVzhfyIkJ5SDvzFM"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "2d3e4f5a-6b7c-8d9e-0f1a-2b3c4d5e6f7a",
+        "name": "Consultar Incidencias MantisBT",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -360,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const fs = require('fs');\nconst backupPath = '/backups';\n\nconst dbInfo = $('Consultar Tamaño DB Postgres').first().json || {};\nconst dbPretty = dbInfo.db_size_pretty || 'desconocido';\nconst dbBytes = Number(dbInfo.db_size_bytes || 0);\n\nconst issuesResp = $('Consultar Incidencias MantisBT').first().json || {};\nconst openIssues = (issuesResp.issues || []).filter(i => {\n  const st = (i.status?.name || '').toLowerCase();\n  return st !== 'resolved' && st !== 'closed';\n});\n\n// Buscar si ya existe una incidencia de backup abierta\nconst existingIssue = openIssues.find(i => {\n  const s = (i.summary || '').toLowerCase();\n  const d = (i.description || '').toLowerCase();\n  return s.includes('backup') || d.includes('backup');\n});\n\nlet isBackupValid = false;\nlet failureReasons = [];\nlet latestFile = 'N/A';\nlet fileSizeMB = '0';\nlet fileSizeBytes = 0;\nlet fileAgeHours = '999';\nlet headerFormat = 'UNKNOWN';\nlet totalBackupsCount = 0;\nlet totalStorageMB = '0';\n\ntry {\n  if (fs.existsSync(backupPath)) {\n    const allFiles = fs.readdirSync(backupPath);\n    const backupFiles = allFiles.filter(f => f.endsWith('.dump') || f.endsWith('.sql'));\n    totalBackupsCount = backupFiles.length;\n\n    if (backupFiles.length > 0) {\n      let totalBytes = 0;\n      const stats = backupFiles.map(file => {\n        try {\n          const stat = fs.statSync(`${backupPath}/${file}`);\n          totalBytes += stat.size;\n          return { file, mtime: stat.mtime, size: stat.size };\n        } catch (e) {\n          return { file, mtime: new Date(0), size: 0 };\n        }\n      }).sort((a, b) => b.mtime - a.mtime);\n\n      totalStorageMB = (totalBytes / (1024 * 1024)).toFixed(2);\n      const latest = stats[0];\n      latestFile = latest.file;\n      fileSizeBytes = latest.size;\n      fileSizeMB = (latest.size / (1024 * 1024)).toFixed(2);\n      fileAgeHours = ((new Date() - new Date(latest.mtime)) / (1000 * 60 * 60)).toFixed(2);\n\n      // 1. Verificación de antigüedad (RPO <= 25 horas)\n      if (parseFloat(fileAgeHours) > 25) {\n        failureReasons.push(`Antigüedad excesiva: ${fileAgeHours}hs (límite RPO: 25hs)`);\n      }\n\n      // 2. Verificación de tamaño mínimo no vacío\n      if (latest.size <= 512) {\n        failureReasons.push(`Archivo sospechosamente pequeño o vacío: ${latest.size} bytes`);\n      }\n\n      // 3. Verificación de Integridad de Cabecera Binaria (Magic Bytes)\n      try {\n        const fd = fs.openSync(`${backupPath}/${latestFile}`, 'r');\n        const buf = Buffer.alloc(8);\n        fs.readSync(fd, buf, 0, 8, 0);\n        fs.closeSync(fd);\n        const asciiHeader = buf.toString('ascii');\n\n        if (latestFile.endsWith('.dump')) {\n          if (asciiHeader.startsWith('PGDMP')) {\n            headerFormat = 'PostgreSQL Custom Dump (PGDMP - Válido)';\n          } else {\n            headerFormat = 'Formato no reconocido';\n            failureReasons.push('Cabecera corrupta o inválida (no inicia con magic bytes PGDMP)');\n          }\n        } else if (latestFile.endsWith('.sql')) {\n          headerFormat = 'SQL Plain Text';\n          if (!asciiHeader.includes('--') && !asciiHeader.includes('/*') && !asciiHeader.toLowerCase().includes('set')) {\n            failureReasons.push('Archivo SQL sin estructura estándar de PostgreSQL');\n          }\n        }\n      } catch (errHeader) {\n        failureReasons.push(`Error al leer cabecera binaria: ${errHeader.message}`);\n      }\n\n      if (failureReasons.length === 0) {\n        isBackupValid = true;\n      }\n    } else {\n      failureReasons.push('No se encontraron copias (.dump / .sql) en /backups');\n    }\n  } else {\n    failureReasons.push('Directorio /backups no existe o no está montado');\n  }\n} catch (err) {\n  failureReasons.push(`Excepción de sistema de archivos: ${err.message}`);\n}\n\nlet action = '';\nlet status = '';\nlet statusSummary = '';\nlet detailedReport = '';\n\nconst dateIso = new Date().toISOString();\nconst grafanaUrl = 'http://localhost:3000/d/observabilidad-integral/observabilidad-integral?from=now-1h&to=now';\n\nif (isBackupValid) {\n  if (existingIssue) {\n    action = 'RESOLVE';\n    status = 'RESOLVED';\n    statusSummary = `[RECUPERADO] Backup de PostgreSQL verificado exitosamente`;\n    detailedReport = `[AUTO-RECUPERACIÓN] La verificación de copias de seguridad de PostgreSQL se ha normalizado a las ${dateIso}.\\nArchivo verificado: ${latestFile}\\nTamaño: ${fileSizeMB} MB | Formato: ${headerFormat}\\nAntigüedad: ${fileAgeHours}hs\\nTamaño base de datos viva: ${dbPretty}\\nTotal copias en almacén: ${totalBackupsCount} (${totalStorageMB} MB)`;\n  } else {\n    action = 'SUCCESS';\n    status = 'SUCCESS';\n    statusSummary = `Backup verificado correctamente: ${latestFile} (${fileSizeMB} MB, hace ${fileAgeHours}hs)`;\n    detailedReport = `Verificación periódica exitosa. Archivo: ${latestFile} (${fileSizeMB} MB, cabecera ${headerFormat}). BD soderia: ${dbPretty}. Copias totales: ${totalBackupsCount}.`;\n  }\n} else {\n  if (existingIssue) {\n    action = 'DEDUP_NOTE';\n    status = 'DEDUP_NOTE';\n    statusSummary = `[REINCIDENCIA] Fallo continuo en verificación de backups de PostgreSQL`;\n    detailedReport = `[SEGUIMIENTO AUTOMÁTICO] La anomalía en los backups de PostgreSQL continúa activa a las ${dateIso}.\\nMotivos detectados:\\n- ${failureReasons.join('\\n- ')}\\nÚltimo archivo detectado: ${latestFile} (${fileSizeMB} MB)\\nTamaño actual de la BD soderia: ${dbPretty}`;\n  } else {\n    action = 'CREATE';\n    status = 'FAILED';\n    statusSummary = `[CRITICAL] Fallo en verificación de backups de PostgreSQL`;\n    detailedReport = [\n      '====================================================',\n      ' ALERTA DE CONTINUIDAD DE NEGOCIO: BACKUPS POSTGRESQL',\n      '====================================================',\n      `Estado          : FALLO DE INTEGRIDAD / RPO`,\n      `Fecha Chequeo   : ${dateIso}`,\n      `Último Archivo  : ${latestFile}`,\n      `Tamaño Copia    : ${fileSizeMB} MB`,\n      `Antigüedad      : ${fileAgeHours} horas`,\n      `Cabecera / Tipo : ${headerFormat}`,\n      `Tamaño BD Real  : ${dbPretty} (${dbBytes} bytes)`,\n      `Copias en Disco : ${totalBackupsCount} (${totalStorageMB} MB)`,\n      '----------------------------------------------------',\n      ' ANOMALÍAS DETECTADAS:',\n      `- ${failureReasons.join('\\n- ')}`,\n      '----------------------------------------------------',\n      `Acción Requerida: Ejecutar manual 'docker compose run --rm backup' y revisar servicio backup.`,\n      'Origen          : n8n Workflow 02 / Auditoría Automatizada'\n    ].join('\\n');\n  }\n}\n\nreturn [{\n  json: {\n    isBackupValid,\n    action,\n    status,\n    statusSummary,\n    detailedReport,\n    latestFile,\n    fileSizeMB,\n    fileAgeHours,\n    headerFormat,\n    totalBackupsCount,\n    totalStorageMB,\n    dbPretty,\n    failureReasons: failureReasons.join('; '),\n    issueId: existingIssue ? existingIssue.id : null,\n    grafanaUrl,\n    alertname: 'PostgresBackupVerification',\n    severity: isBackupValid ? 'info' : 'critical',\n    mantisPriority: 'urgent',\n    mantisSeverity: 'major'\n  }\n}];"
+        },
+        "id": "827d9e33-e995-43cf-8b8a-a374d91cc573",
+        "name": "Auditor Profundo de Backups",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -140,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 1
+            },
+            "conditions": [
+              {
+                "id": "cond-backup-valid",
+                "leftValue": "={{ $json.isBackupValid }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        },
+        "id": "3a4aaa96-636d-46bb-b543-4ce3af2b56bc",
+        "name": "¿Es Backup Válido?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          120,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 1
+            },
+            "conditions": [
+              {
+                "id": "cond-action-resolve",
+                "leftValue": "={{ $json.action }}",
+                "rightValue": "RESOLVE",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        },
+        "id": "4b5c6d7e-8f9a-0b1c-2d3e-4f5a6b7c8d9e",
+        "name": "¿Hubo Recuperación?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          360,
+          -160
+        ]
+      },
+      {
+        "parameters": {
+          "method": "PATCH",
+          "url": "=http://mantisbt/api/rest/issues/{{ $('Auditor Profundo de Backups').first().json.issueId }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "MT1giXS5LfS1aj18uVzhfyIkJ5SDvzFM"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{\n  {\n    \"status\": { \"name\": \"resolved\" },\n    \"resolution\": { \"name\": \"fixed\" }\n  }\n}}",
+          "options": {}
+        },
+        "id": "5c6d7e8f-9a0b-1c2d-3e4f-5a6b7c8d9e0f",
+        "name": "Resolver Ticket MantisBT",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          600,
+          -260
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://mantisbt/api/rest/issues/{{ $('Auditor Profundo de Backups').first().json.issueId }}/notes",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "MT1giXS5LfS1aj18uVzhfyIkJ5SDvzFM"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{\n  {\n    \"text\": $('Auditor Profundo de Backups').first().json.detailedReport,\n    \"view_state\": { \"name\": \"public\" }\n  }\n}}",
+          "options": {}
+        },
+        "id": "6d7e8f9a-0b1c-2d3e-4f5a-6b7c8d9e0f1a",
+        "name": "Nota Recuperación MantisBT",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          800,
+          -260
+        ]
+      },
+      {
+        "parameters": {
+          "fromEmail": "alertas@soderia.local",
+          "toEmail": "operaciones@soderia.local",
+          "subject": "={{ $('Auditor Profundo de Backups').first().json.statusSummary }}",
+          "html": "=<div style=\"font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; border: 1px solid #bbf7d0; border-radius: 8px; overflow: hidden;\">\n  <div style=\"background-color: #16a34a; color: white; padding: 16px 20px;\">\n    <h2 style=\"margin: 0; font-size: 20px;\">✅ [BACKUP RESTABLECIDO] Copia de Seguridad Verificada</h2>\n    <span style=\"display: inline-block; margin-top: 6px; padding: 3px 8px; background-color: rgba(255,255,255,0.25); border-radius: 4px; font-size: 12px; font-weight: bold;\">RPO & INTEGRIDAD OK</span>\n  </div>\n  <div style=\"padding: 20px; background-color: #ffffff; color: #1e293b;\">\n    <p>Se ha detectado la normalización en las copias de seguridad de PostgreSQL.</p>\n    <pre style=\"background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; font-size: 13px; white-space: pre-wrap;\">{{ $('Auditor Profundo de Backups').first().json.detailedReport }}</pre>\n    <p>La incidencia <b>#{{ $('Auditor Profundo de Backups').first().json.issueId }}</b> en MantisBT fue marcada como <b>Resuelta</b> automáticamente.</p>\n    <div style=\"margin-top: 20px;\">\n      <a href=\"http://localhost:8989/view.php?id={{ $('Auditor Profundo de Backups').first().json.issueId }}\" style=\"background-color: #16a34a; color: #ffffff; padding: 10px 16px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;\">Ver Incidencia #{{ $('Auditor Profundo de Backups').first().json.issueId }} en MantisBT</a>\n    </div>\n  </div>\n</div>",
+          "options": {}
+        },
+        "id": "7e8f9a0b-1c2d-3e4f-5a6b-7c8d9e0f1a2b",
+        "name": "Notificar Recuperación Mailpit",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2.1,
+        "position": [
+          1000,
+          -260
+        ],
+        "credentials": {
+          "smtp": {
+            "id": "XvYaqxpH3aTt2CJ4",
+            "name": "SMTP account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO public.n8n_execution_logs (\n    workflow_name,\n    execution_id,\n    alert_name,\n    severity,\n    status,\n    details\n) VALUES (\n    '02 - Verificación de Backups de PostgreSQL',\n    '{{ $execution.id }}',\n    'PostgresBackupVerification',\n    'info',\n    'RESOLVED',\n    '{{ $('Auditor Profundo de Backups').first().json.statusSummary }}'\n);",
+          "options": {}
+        },
+        "id": "8f9a0b1c-2d3e-4f5a-6b7c-8d9e0f1a2b3c",
+        "name": "Auditoría Postgres (Resuelto)",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          1200,
+          -260
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "jFvi9wNotxhtrCpk",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO public.n8n_execution_logs (\n    workflow_name,\n    execution_id,\n    alert_name,\n    severity,\n    status,\n    details\n) VALUES (\n    '02 - Verificación de Backups de PostgreSQL',\n    '{{ $execution.id }}',\n    'PostgresBackupVerification',\n    'info',\n    'SUCCESS',\n    '{{ $('Auditor Profundo de Backups').first().json.statusSummary }}'\n);",
+          "options": {}
+        },
+        "id": "54eeed03-7b7e-420c-9e63-6a2f009bc4f6",
+        "name": "Auditoría Postgres (Éxito)",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          600,
+          -80
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "jFvi9wNotxhtrCpk",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 1
+            },
+            "conditions": [
+              {
+                "id": "cond-action-create",
+                "leftValue": "={{ $json.action }}",
+                "rightValue": "CREATE",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        },
+        "id": "9a0b1c2d-3e4f-5a6b-7c8d-9e0f1a2b3c4d",
+        "name": "¿Es Alerta Nueva o Repetida?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          360,
+          160
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://mantisbt/api/rest/issues",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "MT1giXS5LfS1aj18uVzhfyIkJ5SDvzFM"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{\n  {\n    \"summary\": $('Auditor Profundo de Backups').first().json.statusSummary,\n    \"description\": $('Auditor Profundo de Backups').first().json.detailedReport,\n    \"project\": { \"id\": 1 },\n    \"category\": { \"name\": \"Infraestructura\" },\n    \"priority\": { \"name\": \"urgent\" },\n    \"severity\": { \"name\": \"major\" }\n  }\n}}",
+          "options": {}
+        },
+        "id": "a2300488-c637-4173-a3f1-ee56abe36102",
+        "name": "Crear Ticket MantisBT (Fallo)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          600,
+          80
+        ]
+      },
+      {
+        "parameters": {
+          "fromEmail": "alertas@soderia.local",
+          "toEmail": "operaciones@soderia.local",
+          "subject": "={{ $('Auditor Profundo de Backups').first().json.statusSummary }}",
+          "html": "=<div style=\"font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; border: 1px solid #fca5a5; border-radius: 8px; overflow: hidden;\">\n  <div style=\"background-color: #dc2626; color: white; padding: 16px 20px;\">\n    <h2 style=\"margin: 0; font-size: 20px;\">🚨 [FALLO CRÍTICO] Copias de Seguridad de PostgreSQL</h2>\n    <span style=\"display: inline-block; margin-top: 6px; padding: 3px 8px; background-color: rgba(255,255,255,0.25); border-radius: 4px; font-size: 12px; font-weight: bold;\">RPO / INTEGRIDAD EN RIESGO</span>\n  </div>\n  <div style=\"padding: 20px; background-color: #ffffff; color: #1e293b;\">\n    <p>La auditoría automatizada detectó anomalías críticas en las copias de seguridad:</p>\n    <pre style=\"background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 12px; font-size: 13px; white-space: pre-wrap; color: #991b1b;\">{{ $('Auditor Profundo de Backups').first().json.detailedReport }}</pre>\n    <div style=\"margin-top: 20px;\">\n      <a href=\"http://localhost:8989/view.php?id={{ $json.issue.id }}\" style=\"background-color: #dc2626; color: #ffffff; padding: 10px 16px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-right: 10px;\">Ver Ticket MantisBT #{{ $json.issue.id }}</a>\n      <a href=\"http://localhost:7000/\" style=\"background-color: #475569; color: #ffffff; padding: 10px 16px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;\">Ver Estado Clúster HAProxy</a>\n    </div>\n  </div>\n</div>",
+          "options": {}
+        },
+        "id": "2c684b80-d873-4193-be3d-6003b090b3e4",
+        "name": "Notificar Falla Mailpit",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2.1,
+        "position": [
+          800,
+          80
+        ],
+        "credentials": {
+          "smtp": {
+            "id": "XvYaqxpH3aTt2CJ4",
+            "name": "SMTP account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO public.n8n_execution_logs (\n    workflow_name,\n    execution_id,\n    alert_name,\n    severity,\n    status,\n    details\n) VALUES (\n    '02 - Verificación de Backups de PostgreSQL',\n    '{{ $execution.id }}',\n    'PostgresBackupVerification',\n    'critical',\n    'FAILED',\n    '{{ $('Auditor Profundo de Backups').first().json.statusSummary }}'\n);",
+          "options": {}
+        },
+        "id": "0b1c2d3e-4f5a-6b7c-8d9e-0f1a2b3c4d5e",
+        "name": "Auditoría Postgres (Falla)",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          1000,
+          80
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "jFvi9wNotxhtrCpk",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://mantisbt/api/rest/issues/{{ $('Auditor Profundo de Backups').first().json.issueId }}/notes",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "MT1giXS5LfS1aj18uVzhfyIkJ5SDvzFM"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{\n  {\n    \"text\": $('Auditor Profundo de Backups').first().json.detailedReport,\n    \"view_state\": { \"name\": \"public\" }\n  }\n}}",
+          "options": {}
+        },
+        "id": "1c2d3e4f-5a6b-7c8d-9e0f-1a2b3c4d5e6a",
+        "name": "Agregar Nota Seguimiento MantisBT",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          600,
+          260
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO public.n8n_execution_logs (\n    workflow_name,\n    execution_id,\n    alert_name,\n    severity,\n    status,\n    details\n) VALUES (\n    '02 - Verificación de Backups de PostgreSQL',\n    '{{ $execution.id }}',\n    'PostgresBackupVerification',\n    'critical',\n    'DEDUP_NOTE',\n    '{{ $('Auditor Profundo de Backups').first().json.statusSummary }}'\n);",
+          "options": {}
+        },
+        "id": "2d3e4f5a-6b7c-8d9e-0f1a-2b3c4d5e6a7b",
+        "name": "Auditoría Postgres (Deduplicación)",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          800,
+          260
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "jFvi9wNotxhtrCpk",
+            "name": "Postgres account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Ejecución Programada (Diaria)": {
+        "main": [
+          [
+            {
+              "node": "Consultar Tamaño DB Postgres",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook Verificación Bajo Demanda": {
+        "main": [
+          [
+            {
+              "node": "Consultar Tamaño DB Postgres",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Consultar Tamaño DB Postgres": {
+        "main": [
+          [
+            {
+              "node": "Consultar Incidencias MantisBT",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Consultar Incidencias MantisBT": {
+        "main": [
+          [
+            {
+              "node": "Auditor Profundo de Backups",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Auditor Profundo de Backups": {
+        "main": [
+          [
+            {
+              "node": "¿Es Backup Válido?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "¿Es Backup Válido?": {
+        "main": [
+          [
+            {
+              "node": "¿Hubo Recuperación?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "¿Es Alerta Nueva o Repetida?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "¿Hubo Recuperación?": {
+        "main": [
+          [
+            {
+              "node": "Resolver Ticket MantisBT",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Auditoría Postgres (Éxito)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Resolver Ticket MantisBT": {
+        "main": [
+          [
+            {
+              "node": "Nota Recuperación MantisBT",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Nota Recuperación MantisBT": {
+        "main": [
+          [
+            {
+              "node": "Notificar Recuperación Mailpit",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Notificar Recuperación Mailpit": {
+        "main": [
+          [
+            {
+              "node": "Auditoría Postgres (Resuelto)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "¿Es Alerta Nueva o Repetida?": {
+        "main": [
+          [
+            {
+              "node": "Crear Ticket MantisBT (Fallo)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Agregar Nota Seguimiento MantisBT",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Crear Ticket MantisBT (Fallo)": {
+        "main": [
+          [
+            {
+              "node": "Notificar Falla Mailpit",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Notificar Falla Mailpit": {
+        "main": [
+          [
+            {
+              "node": "Auditoría Postgres (Falla)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Agregar Nota Seguimiento MantisBT": {
+        "main": [
+          [
+            {
+              "node": "Auditoría Postgres (Deduplicación)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1",
+      "binaryMode": "separate",
+      "availableInMCP": true,
+      "errorWorkflow": "bZtx8WLmSD4vGedi",
+      "callerPolicy": "workflowsFromSameOwner"
+    },
+    "staticData": {
+      "node:Ejecución Programada (Diaria)": {
+        "recurrenceRules": [
+          null
+        ],
+        "recurrenceRuleSignatures": [
+          "hours:24"
+        ]
+      }
+    },
+    "meta": null,
+    "tags": [],
+    "versionId": "fb078ef0-f64e-4308-b324-0f0c20a1a5f0",
+    "activeVersionId": "fb078ef0-f64e-4308-b324-0f0c20a1a5f0"
+  }
+]
