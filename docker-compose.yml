@@ -16,9 +16,10 @@ services:
   # =========================================================================
 
   backend:
-    image: ghcr.io/maximilianoorellana02/soderia-backend:latest
-    build: ./backend
+    image: ghcr.io/maximilianoorellana02/soderia-backend:${IMAGE_TAG:-develop}
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     environment:
@@ -45,9 +46,10 @@ services:
       - red_cluster
 
   frontend:
-    image: ghcr.io/maximilianoorellana02/soderia-frontend:latest
-    build: ./frontend
+    image: ghcr.io/maximilianoorellana02/soderia-frontend:${IMAGE_TAG:-develop}
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     ports:
@@ -186,19 +188,20 @@ services:
   nodo1:
     build: ./cluster/scripts
     container_name: postgres_nodo1
+    shm_size: 512mb
     restart: unless-stopped
     environment:
       - PATRONI_NAME=nodo1
       - PATRONI_RESTAPI_CONNECT_ADDRESS=nodo1:8008
       - PATRONI_POSTGRESQL_CONNECT_ADDRESS=nodo1:5432
       - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_USERNAME=postgres
-      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_PASSWORD=root
+      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_PASSWORD=${PATRONI_SUPERUSER_PASSWORD:-root}
       - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_USERNAME=replicator
-      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_PASSWORD=${PATRONI_REPLICATION_PASSWORD:-rep_pass}
       - PATRONI_SUPERUSER_USERNAME=postgres
-      - PATRONI_SUPERUSER_PASSWORD=root
+      - PATRONI_SUPERUSER_PASSWORD=${PATRONI_SUPERUSER_PASSWORD:-root}
       - PATRONI_REPLICATION_USERNAME=replicator
-      - PATRONI_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_REPLICATION_PASSWORD=${PATRONI_REPLICATION_PASSWORD:-rep_pass}
       - PATRONI_ETCD3_HOSTS=etcd:2379
       - PATRONI_SCOPE=cluster_bancario
       - PATRONI_POSTGRESQL_DATA_DIR=/var/lib/postgresql/data
@@ -220,19 +223,20 @@ services:
   nodo2:
     build: ./cluster/scripts
     container_name: postgres_nodo2
+    shm_size: 512mb
     restart: unless-stopped
     environment:
       - PATRONI_NAME=nodo2
       - PATRONI_RESTAPI_CONNECT_ADDRESS=nodo2:8008
       - PATRONI_POSTGRESQL_CONNECT_ADDRESS=nodo2:5432
       - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_USERNAME=postgres
-      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_PASSWORD=root
+      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_PASSWORD=${PATRONI_SUPERUSER_PASSWORD:-root}
       - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_USERNAME=replicator
-      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_PASSWORD=${PATRONI_REPLICATION_PASSWORD:-rep_pass}
       - PATRONI_SUPERUSER_USERNAME=postgres
-      - PATRONI_SUPERUSER_PASSWORD=root
+      - PATRONI_SUPERUSER_PASSWORD=${PATRONI_SUPERUSER_PASSWORD:-root}
       - PATRONI_REPLICATION_USERNAME=replicator
-      - PATRONI_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_REPLICATION_PASSWORD=${PATRONI_REPLICATION_PASSWORD:-rep_pass}
       - PATRONI_ETCD3_HOSTS=etcd:2379
       - PATRONI_SCOPE=cluster_bancario
       - PATRONI_POSTGRESQL_DATA_DIR=/var/lib/postgresql/data
@@ -253,19 +257,20 @@ services:
   nodo3:
     build: ./cluster/scripts
     container_name: postgres_nodo3
+    shm_size: 512mb
     restart: unless-stopped
     environment:
       - PATRONI_NAME=nodo3
       - PATRONI_RESTAPI_CONNECT_ADDRESS=nodo3:8008
       - PATRONI_POSTGRESQL_CONNECT_ADDRESS=nodo3:5432
       - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_USERNAME=postgres
-      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_PASSWORD=root
+      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_PASSWORD=${PATRONI_SUPERUSER_PASSWORD:-root}
       - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_USERNAME=replicator
-      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_PASSWORD=${PATRONI_REPLICATION_PASSWORD:-rep_pass}
       - PATRONI_SUPERUSER_USERNAME=postgres
-      - PATRONI_SUPERUSER_PASSWORD=root
+      - PATRONI_SUPERUSER_PASSWORD=${PATRONI_SUPERUSER_PASSWORD:-root}
       - PATRONI_REPLICATION_USERNAME=replicator
-      - PATRONI_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_REPLICATION_PASSWORD=${PATRONI_REPLICATION_PASSWORD:-rep_pass}
       - PATRONI_ETCD3_HOSTS=etcd:2379
       - PATRONI_SCOPE=cluster_bancario
       - PATRONI_POSTGRESQL_DATA_DIR=/var/lib/postgresql/data
@@ -289,9 +294,11 @@ services:
     image: haproxy:alpine
     container_name: haproxy_router
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     ports:
       # - "5432:5432"   # PostgreSQL: solo red interna (backend/pgadmin/backup)
-      - "7000:7000" # Panel de estadísticas para demostrar el failover
+      - "127.0.0.1:7000:7000"     # Panel de estadísticas para demostrar el failover (solo loopback)
     volumes:
       - ./cluster/config/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     networks:
@@ -360,6 +367,7 @@ services:
   alertmanager:
     image: prom/alertmanager:v0.35.0
     container_name: alertmanager_server
+    profiles: [automatizacion]
     restart: unless-stopped
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
@@ -418,20 +426,45 @@ services:
       - red_cluster
       - interna
 
+  nextcloud-db:
+    image: postgres:17-alpine
+    profiles: [documentacion]
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${NEXTCLOUD_DB_NAME:-nextcloud}
+      POSTGRES_USER: ${NEXTCLOUD_DB_USER:-nextcloud}
+      POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD:-nextcloud_local}
+    volumes:
+      - nextcloud_db_data:/var/lib/postgresql/data
+    networks:
+      - interna
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-nextcloud} -d $${POSTGRES_DB:-nextcloud}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   nextcloud:
-    image: nextcloud:latest
-    container_name: nextcloud_server
+    image: nextcloud:apache
+    profiles: [documentacion]
     restart: unless-stopped
     ports:
-      - "8085:80"
+      - "127.0.0.1:${NEXTCLOUD_PORT:-8082}:80"
     environment:
-      - NEXTCLOUD_ADMIN_USER=admin
-      - NEXTCLOUD_ADMIN_PASSWORD=admin123
-      - NEXTCLOUD_TRUSTED_DOMAINS=nextcloud localhost 127.0.0.1
+      POSTGRES_HOST: nextcloud-db
+      POSTGRES_DB: ${NEXTCLOUD_DB_NAME:-nextcloud}
+      POSTGRES_USER: ${NEXTCLOUD_DB_USER:-nextcloud}
+      POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD:-nextcloud_local}
+      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER:-admin}
+      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD:-Nextcloud2026!}
+      NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_TRUSTED_DOMAINS:-localhost 127.0.0.1 nextcloud}
     volumes:
       - nextcloud_data:/var/www/html
+    depends_on:
+      nextcloud-db:
+        condition: service_healthy
     networks:
-      - red_cluster
+      - interna
 
   # =========================================================================
   # DESPLIEGUE CONTINUO
@@ -458,4 +491,5 @@ networks:
 volumes:
   mantis_db_data:
   n8n_data:
+  nextcloud_db_data:
   nextcloud_data:

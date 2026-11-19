@@ -1,5 +1,6 @@
 # Secretos y credenciales locales
 .env
+docker-compose.carga.yml
 credenciales-demo.txt
 
 # Dependencias y compilados

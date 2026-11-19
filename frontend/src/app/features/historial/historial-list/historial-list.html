@@ -88,9 +88,19 @@
         }
     </ul>
 
-    @if (!cargando() && hayMasPaginas()) {
-    <button class="btn-load-more" (click)="verMas()" [disabled]="cargandoMas()">
-        {{ cargandoMas() ? 'Cargando...' : 'Ver más' }}
-    </button>
+    @if (!cargando() && totalPages() > 1) {
+    <nav class="pagination" aria-label="Páginas del historial">
+        <button type="button" class="page-button" (click)="cambiarPagina(page() - 1)" [disabled]="page() === 1" aria-label="Página anterior">‹</button>
+        @for (numero of paginas(); track $index) {
+        @if (numero === null) {
+        <span class="page-ellipsis" aria-hidden="true">…</span>
+        } @else {
+        <button type="button" class="page-button" [class.active]="numero === page()" [attr.aria-current]="numero === page() ? 'page' : null"
+            [attr.aria-label]="'Página ' + numero" (click)="cambiarPagina(numero)">{{ numero }}</button>
+        }
+        }
+        <button type="button" class="page-button" (click)="cambiarPagina(page() + 1)" [disabled]="page() === totalPages()" aria-label="Página siguiente">›</button>
+    </nav>
+    <p class="pagination-info">Página {{ page() }} de {{ totalPages() }} · 25 por página</p>
     }
 </div>
