@@ -1,0 +1,20 @@
+groups:
+  - name: cluster_postgres_alerts
+    rules:
+      - alert: PostgresNodeDown
+        expr: pg_up == 0
+        for: 15s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Nodo de PostgreSQL caído"
+          description: "El nodo 1 de PostgreSQL dejo de responder."
+
+      - alert: SoderiaTargetDown
+        expr: up{job=~"postgres_cluster|cadvisor|patroni_cluster"} == 0
+        for: 15s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Servicio no disponible: {{ $labels.job }}"
+          description: "El objetivo {{ $labels.instance }} del trabajo {{ $labels.job }} dejo de responder."

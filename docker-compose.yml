@@ -79,7 +79,7 @@ services:
 
   mantis-db:
     image: mariadb@sha256:0e4bb0f339feba125d1154fbacd36c16ec8518f52e44e1f82ecec7d6771caf39
-    profiles: [incidencias]
+    profiles: [ incidencias ]
     restart: unless-stopped
     environment:
       MARIADB_ROOT_PASSWORD: ${MANTIS_DB_ROOT_PASSWORD:-}
@@ -91,14 +91,14 @@ services:
     networks:
       - interna
     healthcheck:
-      test: [CMD, healthcheck.sh, --connect, --innodb_initialized]
+      test: [ CMD, healthcheck.sh, --connect, --innodb_initialized ]
       interval: 3s
       timeout: 3s
       retries: 40
 
   mantisbt:
     image: xlrl/mantisbt@sha256:89bc1bc55fd18698dd6acee8742b503942614b2ac322fb91fd8a62f157fa94cd
-    profiles: [incidencias]
+    profiles: [ incidencias ]
     restart: unless-stopped
     environment:
       MANTIS_DB_PASSWORD: ${MANTIS_DB_PASSWORD:-}
@@ -125,7 +125,7 @@ services:
 
   mantis-correo:
     image: axllent/mailpit@sha256:23fe39e81bde596a918000b3135c0f85dc8bb4c9ea6be274b051143f3e300387
-    profiles: [incidencias]
+    profiles: [ incidencias ]
     restart: unless-stopped
     ports:
       - "127.0.0.1:${MANTIS_MAIL_PORT:-8026}:8025"
@@ -134,13 +134,13 @@ services:
 
   backup:
     image: postgres:17-alpine
-    profiles: [backup]
+    profiles: [ backup ]
     environment:
       PGHOST: haproxy
       PGDATABASE: ${DB_NAME:-soderia}
       PGUSER: ${DB_USER:-soderia}
       PGPASSWORD: ${DB_PASSWORD:-soderia_local}
-    entrypoint: ["/bin/sh", "-ec"]
+    entrypoint: [ "/bin/sh", "-ec" ]
     command:
       - |
         backup_tmp=$$(mktemp "/backups/soderia-$$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")
@@ -176,7 +176,7 @@ services:
     networks:
       - red_cluster
     healthcheck:
-      test: ["CMD", "etcdctl", "endpoint", "health"]
+      test: [ "CMD", "etcdctl", "endpoint", "health" ]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -303,14 +303,14 @@ services:
     networks:
       red_cluster:
         aliases:
-          - db          # compatibilidad: backend puede usar DB_HOST=db
+          - db # compatibilidad: backend puede usar DB_HOST=db
     depends_on:
       - nodo1
       - nodo2
       - nodo3
     healthcheck:
       # Solo healthy cuando HAProxy ve al menos un primario (backend status UP).
-      test: ["CMD-SHELL", "wget -qO- 'http://127.0.0.1:7000/;csv' | grep -q 'postgres_back,BACKEND.*UP'"]
+      test: [ "CMD-SHELL", "wget -qO- 'http://127.0.0.1:7000/;csv' | grep -q 'postgres_back,BACKEND.*UP'" ]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -353,13 +353,32 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus_server
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./cluster/observabilidad/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./cluster/observabilidad/prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
       # Persistencia de la serie temporal dentro del proyecto.
       - ./cluster/observabilidad/prometheus_data:/prometheus
     networks:
       - red_cluster
 
+  alertmanager:
+    image: prom/alertmanager:v0.35.0
+    container_name: alertmanager_server
+    profiles: [automatizacion]
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - ./cluster/observabilidad/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./cluster/observabilidad/alertmanager/secrets/n8n_webhook_password:/etc/alertmanager/secrets/n8n_webhook_password:ro
+      - ./cluster/observabilidad/alertmanager_data:/alertmanager
+    networks:
+      - red_cluster
   grafana:
     image: grafana/grafana:latest
     container_name: grafana_dashboard
@@ -381,28 +400,30 @@ services:
       - red_cluster
 
   n8n:
-      image: docker.n8n.io/n8nio/n8n:2.47.7
-      restart: unless-stopped
-      profiles:
-        - automatizacion
-      ports:
-        - "127.0.0.1:${N8N_PORT:-5678}:5678"
-      environment:
-        N8N_HOST: localhost
-        N8N_PORT: 5678
-        N8N_PROTOCOL: http
-        WEBHOOK_URL: http://localhost:5678/
-        N8N_EDITOR_BASE_URL: http://localhost:5678/
-        N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?Debes configurar N8N_ENCRYPTION_KEY}
-        N8N_SECURE_COOKIE: "false"
-        N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
-        GENERIC_TIMEZONE: America/Argentina/Jujuy
-        TZ: America/Argentina/Jujuy
-      volumes:
-        - n8n_data:/home/node/.n8n
-      networks:
-        - red_cluster
-        - interna
+    image: docker.n8n.io/n8nio/n8n:2.47.7
+    restart: unless-stopped
+    profiles:
+      - automatizacion
+    ports:
+      - "127.0.0.1:${N8N_PORT:-5678}:5678"
+    environment:
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5678/
+      N8N_EDITOR_BASE_URL: http://localhost:5678/
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?Debes configurar N8N_ENCRYPTION_KEY}
+      N8N_SECURE_COOKIE: "false"
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      GENERIC_TIMEZONE: America/Argentina/Jujuy
+      TZ: America/Argentina/Jujuy
+      NODE_FUNCTION_ALLOW_BUILTIN: "fs,path"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./datos/backups:/backups:ro
+    networks:
+      - red_cluster
+      - interna
 
   nextcloud-db:
     image: postgres:17-alpine

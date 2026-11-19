@@ -24,3 +24,7 @@ entities.json
 mempalace.yaml
 skills-lock.json
 temp/
+
+# Secretos y datos persistentes de Alertmanager
+/cluster/observabilidad/alertmanager/secrets/
+/cluster/observabilidad/alertmanager_data/
