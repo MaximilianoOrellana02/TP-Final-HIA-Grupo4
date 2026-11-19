@@ -18,6 +18,8 @@ services:
   backend:
     image: ghcr.io/maximilianoorellana02/soderia-backend:${IMAGE_TAG:-develop}
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     environment:
@@ -46,6 +48,8 @@ services:
   frontend:
     image: ghcr.io/maximilianoorellana02/soderia-frontend:${IMAGE_TAG:-develop}
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     ports:
@@ -190,13 +194,13 @@ services:
       - PATRONI_RESTAPI_CONNECT_ADDRESS=nodo1:8008
       - PATRONI_POSTGRESQL_CONNECT_ADDRESS=nodo1:5432
       - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_USERNAME=postgres
-      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_PASSWORD=root
+      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_PASSWORD=${PATRONI_SUPERUSER_PASSWORD:-root}
       - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_USERNAME=replicator
-      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_PASSWORD=${PATRONI_REPLICATION_PASSWORD:-rep_pass}
       - PATRONI_SUPERUSER_USERNAME=postgres
-      - PATRONI_SUPERUSER_PASSWORD=root
+      - PATRONI_SUPERUSER_PASSWORD=${PATRONI_SUPERUSER_PASSWORD:-root}
       - PATRONI_REPLICATION_USERNAME=replicator
-      - PATRONI_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_REPLICATION_PASSWORD=${PATRONI_REPLICATION_PASSWORD:-rep_pass}
       - PATRONI_ETCD3_HOSTS=etcd:2379
       - PATRONI_SCOPE=cluster_bancario
       - PATRONI_POSTGRESQL_DATA_DIR=/var/lib/postgresql/data
@@ -225,13 +229,13 @@ services:
       - PATRONI_RESTAPI_CONNECT_ADDRESS=nodo2:8008
       - PATRONI_POSTGRESQL_CONNECT_ADDRESS=nodo2:5432
       - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_USERNAME=postgres
-      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_PASSWORD=root
+      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_PASSWORD=${PATRONI_SUPERUSER_PASSWORD:-root}
       - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_USERNAME=replicator
-      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_PASSWORD=${PATRONI_REPLICATION_PASSWORD:-rep_pass}
       - PATRONI_SUPERUSER_USERNAME=postgres
-      - PATRONI_SUPERUSER_PASSWORD=root
+      - PATRONI_SUPERUSER_PASSWORD=${PATRONI_SUPERUSER_PASSWORD:-root}
       - PATRONI_REPLICATION_USERNAME=replicator
-      - PATRONI_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_REPLICATION_PASSWORD=${PATRONI_REPLICATION_PASSWORD:-rep_pass}
       - PATRONI_ETCD3_HOSTS=etcd:2379
       - PATRONI_SCOPE=cluster_bancario
       - PATRONI_POSTGRESQL_DATA_DIR=/var/lib/postgresql/data
@@ -259,13 +263,13 @@ services:
       - PATRONI_RESTAPI_CONNECT_ADDRESS=nodo3:8008
       - PATRONI_POSTGRESQL_CONNECT_ADDRESS=nodo3:5432
       - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_USERNAME=postgres
-      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_PASSWORD=root
+      - PATRONI_POSTGRESQL_AUTHENTICATION_SUPERUSER_PASSWORD=${PATRONI_SUPERUSER_PASSWORD:-root}
       - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_USERNAME=replicator
-      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_POSTGRESQL_AUTHENTICATION_REPLICATION_PASSWORD=${PATRONI_REPLICATION_PASSWORD:-rep_pass}
       - PATRONI_SUPERUSER_USERNAME=postgres
-      - PATRONI_SUPERUSER_PASSWORD=root
+      - PATRONI_SUPERUSER_PASSWORD=${PATRONI_SUPERUSER_PASSWORD:-root}
       - PATRONI_REPLICATION_USERNAME=replicator
-      - PATRONI_REPLICATION_PASSWORD=rep_pass
+      - PATRONI_REPLICATION_PASSWORD=${PATRONI_REPLICATION_PASSWORD:-rep_pass}
       - PATRONI_ETCD3_HOSTS=etcd:2379
       - PATRONI_SCOPE=cluster_bancario
       - PATRONI_POSTGRESQL_DATA_DIR=/var/lib/postgresql/data
@@ -289,9 +293,11 @@ services:
     image: haproxy:alpine
     container_name: haproxy_router
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     ports:
       # - "5432:5432"   # PostgreSQL: solo red interna (backend/pgadmin/backup)
-      - "7000:7000"     # Panel de estadísticas para demostrar el failover
+      - "127.0.0.1:7000:7000"     # Panel de estadísticas para demostrar el failover (solo loopback)
     volumes:
       - ./cluster/config/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     networks:
