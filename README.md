@@ -161,7 +161,7 @@ El entorno cuenta con **n8n** (`http://localhost:5678`, perfil `automatizacion`)
 2. **Flujo 2: Verificación de Backups de PostgreSQL:** Validación diaria del estado, tamaño y antigüedad de los backups en `/backups`, con emisión de incidencias en MantisBT y alertas ante anomalías.
 3. **Flujo 3: Informe de Rendimiento con RAG e IA Generativa:** Recolección de telemetría de Prometheus combinada con manuales operativos en PostgreSQL (`infrastructure_runbooks`), redacción automatizada de reportes técnicos con Google Gemini y almacenamiento en Nextcloud (`http://127.0.0.1:8082`, perfil `documentacion`).
 
-Para la guía detallada de arquitectura, variables y pasos de verificación, consultar la documentación en [docs/12-automatizacion-flujos-n8n.md](docs/12-automatizacion-flujos-n8n.md).
+Para la guía detallada de arquitectura, variables y pasos de verificación, consultar la documentación en [docs/13-automatizacion-flujos-n8n.md](docs/13-automatizacion-flujos-n8n.md).
 
 ## Modelo de datos
 
