@@ -14,18 +14,30 @@ Los commits permiten seguir qué se agregó y cuándo. En `develop` encontramos,
 
 ## Ramas de trabajo
 
-Separamos tareas en ramas antes de integrarlas. Estos nombres y usos están comprobados en el remoto:
+Separamos tareas en ramas antes de integrarlas. Al **19/11/2026** comprobamos **18 ramas publicadas en `origin`**. La tabla incluye todas las que aparecen en el remoto, tanto las de desarrollo como las de documentación, correcciones y coordinación del equipo:
 
 | Rama | Trabajo registrado | Evidencia |
 | --- | --- | --- |
-| `main` | Rama predeterminada del repositorio. | [Repositorio](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4) |
-| `develop` | Rama donde se integraron los cambios recientes del equipo. | [Historial de `develop`](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/commits/develop/) |
-| `docs/punto-5-optimizacion-sql` | Documentación de las consultas y las pruebas de base de datos. | [PR #4](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/pull/4) |
-| `fix/soderia-cluster-estable` | Correcciones del clúster. | [PR #12](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/pull/12) |
+| `main` | Rama predeterminada del repositorio. | [Ver rama](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/tree/main) |
+| `develop` | Integración de los cambios recientes del equipo. | [Ver rama](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/tree/develop) |
+| `checklist` | Lista compartida de seguimiento del TP. | [Ver rama](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/tree/checklist) |
+| `docs/punto-2-scrum-jira` | Informe de Scrum y evidencias de Jira. | [PR #3](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/pull/3) |
+| `docs/punto-3-git-colaboracion` | Este informe de Git y colaboración. | [Ver rama](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/tree/docs/punto-3-git-colaboracion) |
+| `docs/punto-5-optimizacion-sql` | Consultas y pruebas de base de datos. | [PR #4](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/pull/4) |
+| `docs/punto-6-cluster` | Informe técnico del clúster. | [PR #14](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/pull/14) |
+| `docs/punto-10-monitoreo` | Informe de monitoreo y métricas. | [PR #15](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/pull/15) |
+| `feat/clientes-paginacion-servidor` | Paginación de clientes desde el servidor. | [PR #9, borrador](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/pull/9) |
 | `feat/optimizacion-db-carga-6m` | Carga de prueba y optimizaciones de base de datos. | [PR #17](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/pull/17) |
+| `feature/Cluster` | Implementación del clúster. | [PR #7](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/pull/7) |
+| `feature/automatizacion-n8n` | Automatizaciones y flujos de n8n. | [PR #16](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/pull/16) |
+| `feature/ci-cd` | Pipeline de integración y despliegue. | [PR #6](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/pull/6) y [#13](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/pull/13) |
+| `feature/docker-pgadmin-backup` | pgAdmin y copias de seguridad en Docker. | [PR #1](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/pull/1) |
+| `feature/documentacion-nextcloud` | Servicio y documentación de Nextcloud. | [Ver rama](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/tree/feature/documentacion-nextcloud) |
 | `feature/jira` | Actualización del informe Scrum y las reuniones. | [PR #18](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/pull/18) |
+| `feature/seguridad` | Cambios y documentación de seguridad. | [Ver rama](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/tree/feature/seguridad) |
+| `fix/soderia-cluster-estable` | Correcciones de estabilidad del clúster. | [PR #12](https://github.com/MaximilianoOrellana02/TP-Final-HIA-Grupo4/pull/12) |
 
-Los prefijos `docs/`, `fix/`, `feat/` y `feature/` ayudan a reconocer el tipo de cambio. El repositorio usa tanto `feat/` como `feature/`; **no hay una convención única aplicada a todas las ramas**. Las ramas de trabajo permanecen visibles en el remoto después de algunas integraciones.
+Los prefijos `docs/`, `fix/`, `feat/` y `feature/` ayudan a reconocer el tipo de cambio. El repositorio usa tanto `feat/` como `feature/`; **no hay una convención única aplicada a todas las ramas**. Las ramas de trabajo permanecen visibles en el remoto después de algunas integraciones. Que una rama exista en el remoto no significa que ya se haya integrado.
 
 ## Solicitudes de integración y revisiones
 
