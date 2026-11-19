@@ -76,7 +76,7 @@ aplicación se declaran en el mismo archivo y se resuelven entre sí por nombre 
 | n8n Editor | <http://localhost:5678> |
 | MantisBT | <http://localhost:8989> |
 | Mailpit (Correo de Alertas) | <http://localhost:8026> |
-| Nextcloud (Informes RAG) | <http://localhost:8085> (admin / admin123) |
+| Nextcloud (Gestión Documental) | <http://127.0.0.1:8082> (perfil `documentacion`, credenciales en `.env`) |
 | Prometheus | solo interno: `http://prometheus:9090` dentro de `red_cluster` |
 | PostgreSQL (HAProxy) | solo interno: `haproxy:5432` (o el alias `db:5432`) |
 
@@ -159,7 +159,7 @@ El entorno cuenta con **n8n** (`http://localhost:5678`, perfil `automatizacion`)
 
 1. **Flujo 1: Alertas Automáticas de Infraestructura:** Deduplicación inteligente, ciclo de vida completo (`firing`/`resolved`), auto-resolución de tickets en MantisBT, telemetría en vivo desde Prometheus, asignación preventiva por matriz de roles y notificaciones interactivas.
 2. **Flujo 2: Verificación de Backups de PostgreSQL:** Validación diaria del estado, tamaño y antigüedad de los backups en `/backups`, con emisión de incidencias en MantisBT y alertas ante anomalías.
-3. **Flujo 3: Informe de Rendimiento con RAG e IA Generativa:** Recolección de telemetría de Prometheus combinada con manuales operativos en PostgreSQL (`infrastructure_runbooks`), redacción automatizada de reportes técnicos con Google Gemini y almacenamiento en Nextcloud (`http://localhost:8085`).
+3. **Flujo 3: Informe de Rendimiento con RAG e IA Generativa:** Recolección de telemetría de Prometheus combinada con manuales operativos en PostgreSQL (`infrastructure_runbooks`), redacción automatizada de reportes técnicos con Google Gemini y almacenamiento en Nextcloud (`http://127.0.0.1:8082`, perfil `documentacion`).
 
 Para la guía detallada de arquitectura, variables y pasos de verificación, consultar la documentación en [docs/12-automatizacion-flujos-n8n.md](docs/12-automatizacion-flujos-n8n.md).
 

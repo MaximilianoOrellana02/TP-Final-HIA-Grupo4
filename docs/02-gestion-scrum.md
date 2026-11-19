@@ -6,7 +6,7 @@ El equipo organiza el TP Integrador de Sodería en el proyecto Scrum **TP Integr
 
 [Abrir el backlog del proyecto HIA en Jira](https://huellsnicolasr.atlassian.net/jira/software/projects/HIA/boards/2/backlog).
 
-Las tareas **HIA-1 a HIA-15** ya están creadas. Las cinco épicas **HIA-16 a HIA-20** agrupan temas relacionados. Las actividades siguen siendo tareas técnicas. La información y las capturas de este documento reflejan el estado observado el **12/11/2026**; los cambios posteriores deberán registrarse en Jira.
+Las tareas **HIA-1 a HIA-15** y las cinco épicas **HIA-16 a HIA-20** organizan el alcance del integrador. Las actividades siguen siendo tareas técnicas. El estado de este documento corresponde al **19/11/2026**.
 
 ## 2.2. Product Backlog
 
@@ -42,7 +42,7 @@ Las estimaciones de dificultad se guardaron en Jira como puntos de historia; no 
 | Figueroa, Maximiliano Rubén Mariano | Desarrollador y coordinador general |
 | Mendez, Marcos Antonio | Desarrollador |
 
-Los cinco realizan aportes técnicos y deben comprender el sistema para la defensa individual. Al **12/11/2026**, HIA-1, HIA-4 y HIA-7 estaban asignadas a Orellana; HIA-2 y HIA-3 a Huells; HIA-5 a Figueroa; y HIA-6 a Mendez. **HIA-8 a HIA-15 seguían sin responsable**. El equipo prevé asignarlas un día antes del inicio de su sprint.
+Los cinco realizan aportes técnicos y deben comprender el sistema para la defensa individual. Las quince tareas y las cinco épicas tienen responsable en Jira. La distribución de las tareas es: Orellana, HIA-1 y HIA-4; Huells, HIA-2, HIA-3, HIA-5 y HIA-11; Figueroa, HIA-7, HIA-8, HIA-9 y HIA-12; Mendez, HIA-6, HIA-10 y HIA-14; Guari, HIA-13 y HIA-15. Las épicas HIA-16 a HIA-20 están asignadas, respectivamente, a Huells, Orellana, Figueroa, Mendez y Guari.
 
 ## 2.4. Plan de sprints
 
@@ -53,13 +53,15 @@ Los cinco realizan aportes técnicos y deben comprender el sistema para la defen
 | 3. Integración y operación | Integrar, publicar, monitorear y atender incidencias. | HIA-8, HIA-9, HIA-10, HIA-11 |
 | 4. Automatización, seguridad y entrega | Compartir documentación, automatizar, revisar seguridad y cerrar la entrega. | HIA-12, HIA-13, HIA-14, HIA-15 |
 
-Los cuatro sprints y sus tareas figuran en Jira. Al 12/11, el primero estaba activo y los otros tres eran futuros. Las fechas de vencimiento de las tareas son plazos de planificación de esta simulación académica; no demuestran que el trabajo esté terminado.
+Los cuatro sprints y sus tareas figuran en Jira. Al **19/11/2026**, los sprints 1, 2 y 3 figuran cerrados y el 4 sigue activo: HIA-13 está en «Listo»; HIA-12, HIA-14 y HIA-15 están «En curso». Existe además un sprint futuro vacío, sin tareas del plan. Las fechas de vencimiento son plazos de planificación de esta simulación académica; no demuestran que el trabajo esté terminado.
+
+En las tareas, HIA-1 a HIA-11 y HIA-13 figuran en «Listo»; HIA-12, HIA-14 y HIA-15 figuran «En curso». La épica HIA-19 figura en «Listo» aunque HIA-12, que depende de ella, continúa en curso; su estado requiere revisión. Las cinco épicas tienen fecha de inicio en Jira y cuatro tienen fecha de vencimiento; HIA-20 todavía no tiene vencimiento.
 
 ## 2.5. Seguimiento y reuniones
 
 El equipo actualizará el estado de cada tarea en Jira y agregará allí enlaces a entregables, avances e impedimentos cuando ocurran. Las decisiones que afecten prioridades o alcance se registrarán con fecha en la tarea correspondiente o en el registro de reuniones. Una tarea se considerará terminada cuando se pueda comprobar su criterio de aceptación.
 
-Las actas están en [Registro de reuniones Scrum](02-reuniones-scrum.md). Las reuniones del **09 y 11/11/2026** fueron informadas como realizadas; el detalle de la segunda sigue pendiente de completar. Las del **13 y 15/11/2026** permanecen programadas. Las capturas del tablero muestran estados, pero no prueban por sí solas la realización de reuniones.
+El [Registro de reuniones Scrum](02-reuniones-scrum.md) resume las reuniones informadas por el equipo para el **11, 15, 17 y 19/11/2026**. Como no se conservaron minutas detalladas, documenta temas generales relacionados con los sprints y evita atribuir asistentes o decisiones individuales no confirmados. Las capturas del tablero muestran estados de tareas, pero no prueban por sí solas la realización de reuniones.
 
 ## 2.6. Evidencias
 
@@ -79,4 +81,6 @@ Las capturas del equipo muestran el proyecto, las épicas, una tarea con su crit
 
 ![Sprint 4 con objetivo y tareas](../img/02_/sprint-4.png)
 
-**Pendiente para cerrar el punto:** asignar HIA-8 a HIA-15 cuando corresponda, guardar evidencia posterior de cambios reales de estado y completar únicamente las actas de reuniones que efectivamente se realicen.
+Las siete capturas de esta sección también están adjuntas a [HIA-2](https://huellsnicolasr.atlassian.net/browse/HIA-2). Documentan la estructura y el seguimiento inicial del proyecto; no acreditan por sí solas la realización de reuniones.
+
+**Pendiente para cerrar el punto:** conservar evidencia de los estados registrados, revisar HIA-19 frente a HIA-12 en curso y agregar al registro de reuniones cualquier detalle que el equipo pueda confirmar.

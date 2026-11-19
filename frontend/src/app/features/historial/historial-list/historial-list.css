@@ -350,27 +350,49 @@
     white-space: nowrap;
 }
 
-/* ---------- Ver más ---------- */
-.btn-load-more {
-    width: 100%;
+/* ---------- Paginación ---------- */
+.pagination {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
     margin-top: 0.8rem;
-    padding: 0.85rem;
-    border-radius: 13px;
+}
+
+.page-button {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0.4rem;
+    border-radius: 10px;
     border: 1.5px solid var(--color-border);
     background: var(--color-surface);
     color: var(--color-primary-dark);
     font-weight: 700;
     font-size: 0.95rem;
     cursor: pointer;
-    transition: background 0.15s ease;
 }
 
-.btn-load-more:disabled {
-    opacity: 0.6;
+.page-button.active {
+    background: var(--color-primary-dark);
+    border-color: var(--color-primary-dark);
+    color: white;
 }
 
-.btn-load-more:active:not(:disabled) {
-    background: #eaf6f4;
+.page-button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.page-ellipsis {
+    align-self: center;
+    color: var(--color-muted);
+}
+
+.pagination-info {
+    margin: 0.6rem 0 0;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--color-muted);
 }
 
 .btn-dashboard {
@@ -422,7 +444,7 @@
 .btn-dashboard:focus-visible,
 .btn-exportar:focus-visible,
 .entrega-card:focus-visible,
-.btn-load-more:focus-visible {
+.page-button:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
 }
