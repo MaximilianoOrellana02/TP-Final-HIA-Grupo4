@@ -16,8 +16,7 @@ services:
   # =========================================================================
 
   backend:
-    image: ghcr.io/maximilianoorellana02/soderia-backend:latest
-    build: ./backend
+    image: ghcr.io/maximilianoorellana02/soderia-backend:${IMAGE_TAG:-develop}
     restart: unless-stopped
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
@@ -45,8 +44,7 @@ services:
       - red_cluster
 
   frontend:
-    image: ghcr.io/maximilianoorellana02/soderia-frontend:latest
-    build: ./frontend
+    image: ghcr.io/maximilianoorellana02/soderia-frontend:${IMAGE_TAG:-develop}
     restart: unless-stopped
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
@@ -185,6 +183,7 @@ services:
   nodo1:
     build: ./cluster/scripts
     container_name: postgres_nodo1
+    shm_size: 512mb
     restart: unless-stopped
     environment:
       - PATRONI_NAME=nodo1
@@ -219,6 +218,7 @@ services:
   nodo2:
     build: ./cluster/scripts
     container_name: postgres_nodo2
+    shm_size: 512mb
     restart: unless-stopped
     environment:
       - PATRONI_NAME=nodo2
@@ -252,6 +252,7 @@ services:
   nodo3:
     build: ./cluster/scripts
     container_name: postgres_nodo3
+    shm_size: 512mb
     restart: unless-stopped
     environment:
       - PATRONI_NAME=nodo3
@@ -361,6 +362,7 @@ services:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/observabilidad-integral.json
     volumes:
       - ./cluster/observabilidad/grafana_data:/var/lib/grafana
       # Provisioning: datasource + dashboards se cargan al iniciar.
@@ -371,6 +373,30 @@ services:
       - prometheus
     networks:
       - red_cluster
+
+  n8n:
+      image: docker.n8n.io/n8nio/n8n:2.47.7
+      restart: unless-stopped
+      profiles:
+        - automatizacion
+      ports:
+        - "127.0.0.1:${N8N_PORT:-5678}:5678"
+      environment:
+        N8N_HOST: localhost
+        N8N_PORT: 5678
+        N8N_PROTOCOL: http
+        WEBHOOK_URL: http://localhost:5678/
+        N8N_EDITOR_BASE_URL: http://localhost:5678/
+        N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?Debes configurar N8N_ENCRYPTION_KEY}
+        N8N_SECURE_COOKIE: "false"
+        N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+        GENERIC_TIMEZONE: America/Argentina/Jujuy
+        TZ: America/Argentina/Jujuy
+      volumes:
+        - n8n_data:/home/node/.n8n
+      networks:
+        - red_cluster
+        - interna
 
   # =========================================================================
   # DESPLIEGUE CONTINUO
@@ -396,3 +422,4 @@ networks:
 
 volumes:
   mantis_db_data:
+  n8n_data:

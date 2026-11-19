@@ -98,7 +98,7 @@
     </div>
     }
 
-    @if (!cargando() && clientesFiltrados().length === 0 && !hayMas() && !error()) {
+    @if (!cargando() && clientesFiltrados().length === 0 && !error()) {
     <div class="state-message empty">
         <i class="bi bi-people"></i>
         <p>{{ viendoArchivados() ? 'No hay clientes archivados' : 'No hay clientes para mostrar' }}</p>
@@ -175,14 +175,24 @@
         }
     </ul>
 
-    @if (!cargando() && hayMas()) {
-    <button class="btn-load-more" (click)="verMas()" [disabled]="cargandoMas()">
-        {{ cargandoMas() ? 'Cargando…' : 'Ver más (' + cantidadRestante() + ' restantes)' }}
-    </button>
+    @if (!cargando() && totalPaginas() > 1) {
+    <nav class="pagination" aria-label="Páginas de clientes">
+        <button type="button" class="page-button" (click)="cambiarPagina(pagina() - 1)" [disabled]="pagina() === 1" aria-label="Página anterior">‹</button>
+        @for (numero of paginas(); track $index) {
+        @if (numero === null) {
+        <span class="page-ellipsis" aria-hidden="true">…</span>
+        } @else {
+        <button type="button" class="page-button" [class.active]="numero === pagina()" [attr.aria-current]="numero === pagina() ? 'page' : null"
+            [attr.aria-label]="'Página ' + numero" (click)="cambiarPagina(numero)">{{ numero }}</button>
+        }
+        }
+        <button type="button" class="page-button" (click)="cambiarPagina(pagina() + 1)" [disabled]="pagina() === totalPaginas()" aria-label="Página siguiente">›</button>
+    </nav>
+    <p class="pagination-info">Página {{ pagina() }} de {{ totalPaginas() }} · 25 por página</p>
     }
 
     @if (!viendoArchivados() && (filtro() === 'ruta' || filtro() === 'frecuentes' || dia() || soloDeudaVieja())) {
-    <p class="state-message">Los filtros de ruta, frecuentes, día y deuda vieja se aplican a las páginas cargadas. Usá «Ver más» para consultar más clientes.</p>
+    <p class="state-message">Los filtros de ruta, frecuentes, día y deuda vieja se aplican a la página actual. Usá los números para consultar otras páginas.</p>
     }
 
     <div class="print-only">

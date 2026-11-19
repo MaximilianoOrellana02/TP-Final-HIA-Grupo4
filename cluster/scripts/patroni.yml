@@ -1,8 +1,8 @@
 bootstrap:
   dcs:
-    ttl: 30
-    loop_wait: 10
-    retry_timeout: 10
+    ttl: 20
+    loop_wait: 3
+    retry_timeout: 5
     # 100 MB: un replica con mas retraso que esto no puede ser promovida.
     maximum_lag_on_failover: 104857600
     postgresql:

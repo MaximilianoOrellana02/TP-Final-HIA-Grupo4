@@ -1,10 +1,11 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HistorialService } from '../../../core/services/historial.service';
 import { Historial, ResumenHistorial } from '../../../core/models/historial.model';
 import * as XLSX from 'xlsx';
 import DashboardModal from '../../../shared/dashboard-modal/dashboard-modal';
 import { NotificationService } from '../../../core/services/notification.service';
+import { paginasVisibles } from '../../../shared/paginas-visibles.util';
 
 
 type Filtro = 'hoy' | 'semana' | 'mes' | 'todos';
@@ -25,11 +26,11 @@ export default class HistorialList implements OnInit {
   filtro = signal<Filtro>('hoy');
   page = signal(1);
   totalPages = signal(1);
+  paginas = computed(() => paginasVisibles(this.page(), this.totalPages()));
   totalRegistros = signal(0);
   resumenPeriodo = signal<ResumenHistorial | null>(null);
 
   cargando = signal(true);
-  cargandoMas = signal(false);
   error = signal<string | null>(null);
 
   mostrarDashboard = signal(false);
@@ -123,10 +124,11 @@ export default class HistorialList implements OnInit {
     }
   }
 
-  cargar(reset: boolean) {
-    const version = reset ? ++this.cargaVersion : this.cargaVersion;
+  cargar(reset: boolean, pagina = 1) {
+    const version = ++this.cargaVersion;
+    this.cargando.set(true);
+    this.entregas.set([]);
     if (reset) {
-      this.cargando.set(true);
       this.page.set(1);
       this.totalPages.set(1);
       this.entregas.set([]);
@@ -140,36 +142,29 @@ export default class HistorialList implements OnInit {
           if (this.cargaVersion === version) this.resumenPeriodo.set(null);
         },
       });
-    } else {
-      this.cargandoMas.set(true);
     }
     this.error.set(null);
 
-    this.historialService.listar({ page: this.page(), ...this.rangoFechas() }).subscribe({
+    this.historialService.listar({ page: pagina, limit: 25, ...this.rangoFechas() }).subscribe({
       next: (resultado) => {
         if (this.cargaVersion !== version) return;
-        this.entregas.set(reset ? resultado.data : [...this.entregas(), ...resultado.data]);
+        this.entregas.set(resultado.data);
+        this.page.set(pagina);
         this.totalPages.set(resultado.totalPages);
         this.totalRegistros.set(resultado.total);
         this.cargando.set(false);
-        this.cargandoMas.set(false);
       },
       error: () => {
         if (this.cargaVersion !== version) return;
         this.error.set('No se pudo cargar el historial');
         this.cargando.set(false);
-        this.cargandoMas.set(false);
       },
     });
   }
 
-  verMas() {
-    this.page.update((p) => p + 1);
-    this.cargar(false);
-  }
-
-  hayMasPaginas(): boolean {
-    return this.page() < this.totalPages();
+  cambiarPagina(pagina: number) {
+    if (this.cargando() || (pagina === this.page() && !this.error()) || pagina < 1 || pagina > this.totalPages()) return;
+    this.cargar(false, pagina);
   }
 
 

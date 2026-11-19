@@ -134,7 +134,7 @@ export default class ClienteDetalle implements OnInit {
     this.cargarCliente(id);
     this.cargarMovimientos(id);
     this.cargarEnvases(id);
-    this.clienteService.actividad().subscribe({
+    this.clienteService.actividad([id]).subscribe({
       next: ({ clientes }) => this.activo.set((clientes.find((a) => a.clienteId === id)?.entregasUltimos30 ?? 0) > 0),
       error: () => {},
     });

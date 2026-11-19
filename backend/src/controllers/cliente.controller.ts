@@ -10,6 +10,7 @@ import { geocodificarDireccion } from "../utils/geocode";
 import {
   cuerpoCliente,
   DatosClienteInvalidos,
+  esUuid,
   validarCliente,
   validarCoordenadas,
   validarDias,
@@ -46,6 +47,13 @@ export async function listarClientes(req: AuthRequest, res: Response) {
   try {
     const paginaSolicitada = req.query.page;
     if (paginaSolicitada === undefined) {
+      const total = await Cliente.count();
+      if (total > 5000) {
+        return res.status(413).json({
+          error: "Hay demasiados clientes para cargarlos todos. Usar la lista paginada.",
+          total,
+        });
+      }
       const clientes = await Cliente.findAll({
         include: [
           { model: SaldoEnvase, as: "saldosEnvase", attributes: ["productoId", "cantidad"] },
@@ -77,21 +85,57 @@ export async function listarClientes(req: AuthRequest, res: Response) {
     if (req.query.comercial === "true") Object.assign(where, { categoria: "restaurante" });
     const archivados = req.query.archivados === "true";
     if (archivados) Object.assign(where, { deletedAt: { [Op.ne]: null } });
-    const { count, rows } = await Cliente.findAndCountAll({
-      paranoid: !archivados,
-      where,
-      include: [
-        { model: SaldoEnvase, as: "saldosEnvase", attributes: ["productoId", "cantidad"], required: false },
-        { model: Barrio, as: "barrio", attributes: ["id", "nombre"], required: false },
-      ],
-      distinct: true,
-      limit,
-      offset: (page - 1) * limit,
-      order: [["apellido", "ASC"], ["nombre", "ASC"], ["id", "ASC"]],
-    });
+    // Los filtros solo usan columnas de Cliente. Contar no requiere unir barrio y saldos.
+    const [count, rows] = await Promise.all([
+      Cliente.count({ paranoid: !archivados, where }),
+      Cliente.findAll({
+        paranoid: !archivados,
+        where,
+        include: [
+          { model: SaldoEnvase, as: "saldosEnvase", attributes: ["productoId", "cantidad"], required: false },
+          { model: Barrio, as: "barrio", attributes: ["id", "nombre"], required: false },
+        ],
+        limit,
+        offset: (page - 1) * limit,
+        order: [["apellido", "ASC"], ["nombre", "ASC"], ["id", "ASC"]],
+      }),
+    ]);
     return res.json({ items: rows, page, limit, total: count, hasMore: page * limit < count });
   } catch (error) {
     return responderErrorCliente(res, error, "Error al listar clientes");
+  }
+}
+
+// Misma seleccion que calcularParadas en el frontend, pero paginada en PostgreSQL.
+export async function listarClientesDeHoy(req: AuthRequest, res: Response) {
+  try {
+    const page = Number(req.query.page ?? 1);
+    if (!Number.isSafeInteger(page) || page < 1) {
+      return res.status(400).json({ error: "page debe ser positivo" });
+    }
+    const incluirRestaurantes = req.query.incluirRestaurantes === "true";
+    const fecha = fechaComercial();
+    const dias = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
+    const dia = dias[new Date(`${fecha}T12:00:00Z`).getUTCDay()];
+    const where = `c."deletedAt" IS NULL AND (
+      b."diasVisita"::jsonb ? :dia OR
+      (:incluirRestaurantes AND c.categoria = 'restaurante') OR
+      c."ultimaVisitaFecha" = :fecha
+    )`;
+    const replacements = { dia, incluirRestaurantes, fecha };
+    const [conteo] = await sequelize.query<{ total: number }>(
+      `SELECT count(*)::integer AS total FROM clientes c LEFT JOIN barrios b ON b.id = c."barrioId" WHERE ${where}`,
+      { type: QueryTypes.SELECT, replacements },
+    );
+    const limit = 100;
+    const items = await sequelize.query<Cliente>(
+      `SELECT c.* FROM clientes c LEFT JOIN barrios b ON b.id = c."barrioId"
+       WHERE ${where} ORDER BY c.apellido, c.nombre, c.id LIMIT :limit OFFSET :offset`,
+      { type: QueryTypes.SELECT, replacements: { ...replacements, limit, offset: (page - 1) * limit } },
+    );
+    return res.json({ items, page, total: conteo.total, hasMore: page * limit < conteo.total });
+  } catch (error) {
+    return responderErrorCliente(res, error, "Error al listar la ruta de hoy");
   }
 }
 
@@ -274,17 +318,30 @@ interface DeudaCliente {
 export async function listarDeudaVieja(req: AuthRequest, res: Response) {
   try {
     const dias = validarDias(req.query.dias);
+    const idsParametro = req.query.ids;
+    const ids = typeof idsParametro === "string" ? idsParametro.split(",") : [];
+    if (!ids.length || ids.length > 100 || ids.some((id) => !esUuid(id))) {
+      return res.status(400).json({ error: "ids debe contener entre 1 y 100 UUID validos" });
+    }
     const resultados = await sequelize.query<DeudaCliente>(
       `
             SELECT c.id, c.nombre, c.apellido, c."saldoActual",
-                MAX(CASE WHEN h."montoPagado" > 0 THEN h.fecha END) AS "ultimoPago",
-                MIN(h.fecha) AS "primeraEntrega"
+                pago.fecha AS "ultimoPago", primera.fecha AS "primeraEntrega"
             FROM clientes c
-            LEFT JOIN historiales h ON h."clienteId" = c.id
+            LEFT JOIN LATERAL (
+                SELECT h.fecha FROM historiales h
+                WHERE h."clienteId" = c.id AND h."montoPagado" > 0
+                ORDER BY h.fecha DESC LIMIT 1
+            ) pago ON true
+            LEFT JOIN LATERAL (
+                SELECT h.fecha FROM historiales h
+                WHERE h."clienteId" = c.id
+                ORDER BY h.fecha ASC LIMIT 1
+            ) primera ON true
             WHERE c."saldoActual" > 0 AND c."deletedAt" IS NULL
-            GROUP BY c.id, c.nombre, c.apellido, c."saldoActual"
+              ${ids.length ? 'AND c.id IN (:ids)' : ''}
         `,
-      { type: QueryTypes.SELECT },
+      { type: QueryTypes.SELECT, replacements: { ids } },
     );
     const hoy = new Date();
     const deudaVieja = resultados
@@ -327,6 +384,23 @@ export async function actividadClientes(req: AuthRequest, res: Response) {
     const hoy = fechaComercial();
     const inicioMes = rangoDiaComercial(`${hoy.slice(0, 7)}-01`).inicio;
     const hace30Dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    if (req.query.soloTotal === "true") {
+      const [total] = await sequelize.query<{ activosMes: string }>(
+        `SELECT count(DISTINCT h."clienteId") AS "activosMes"
+         FROM historiales h
+         JOIN clientes c ON c.id = h."clienteId" AND c."deletedAt" IS NULL
+         WHERE h.fecha >= :inicioMes
+           AND EXISTS (SELECT 1 FROM historial_detalles d
+                       WHERE d."historialId" = h.id AND d."cantidadEntregada" > 0)`,
+        { type: QueryTypes.SELECT, replacements: { inicioMes } },
+      );
+      return res.json({ activosMes: Number(total.activosMes), clientes: [] });
+    }
+    const idsParametro = req.query.ids;
+    const ids = typeof idsParametro === "string" ? idsParametro.split(",") : [];
+    if (!ids.length || ids.length > 100 || ids.some((id) => !esUuid(id))) {
+      return res.status(400).json({ error: "ids debe contener entre 1 y 100 UUID validos" });
+    }
     const filas = await sequelize.query<ActividadFila>(
       `
             SELECT h."clienteId",
@@ -335,13 +409,13 @@ export async function actividadClientes(req: AuthRequest, res: Response) {
                 MAX(CASE WHEN h.fecha >= :inicioMes THEN 1 ELSE 0 END) AS "activoMes"
             FROM historiales h
             JOIN clientes c ON c.id = h."clienteId" AND c."deletedAt" IS NULL
-            WHERE EXISTS (
+            WHERE ${ids.length ? 'h."clienteId" IN (:ids) AND' : ''} EXISTS (
                 SELECT 1 FROM historial_detalles d
                 WHERE d."historialId" = h.id AND d."cantidadEntregada" > 0
             )
             GROUP BY h."clienteId"
         `,
-      { type: QueryTypes.SELECT, replacements: { hace30Dias, inicioMes } },
+      { type: QueryTypes.SELECT, replacements: { hace30Dias, inicioMes, ids } },
     );
     const clientes = filas.map((f) => {
       const entregasUltimos30 = Number(f.entregasUltimos30);

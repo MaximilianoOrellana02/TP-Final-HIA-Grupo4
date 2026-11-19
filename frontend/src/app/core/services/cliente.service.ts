@@ -36,6 +36,15 @@ export class ClienteService {
     })));
   }
 
+  listarRutaHoy(page: number, incluirRestaurantes: boolean): Observable<{ items: Cliente[]; page: number; total: number; hasMore: boolean }> {
+    return this.http.get<{ items: Cliente[]; page: number; total: number; hasMore: boolean }>(
+      `${this.baseUrl}/ruta-hoy`, { params: { page, incluirRestaurantes } },
+    ).pipe(map((resultado) => ({
+      ...resultado,
+      items: resultado.items.map((c) => this.normalizarCliente(c)),
+    })));
+  }
+
   listar(): Observable<Cliente[]> {
     return this.http
       .get<Cliente[]>(this.baseUrl)
@@ -80,14 +89,22 @@ export class ClienteService {
     return this.http.put<Cliente>(`${this.baseUrl}/${id}/visita`, { visitado });
   }
 
-  listarDeudaVieja(dias: number = 30): Observable<ClienteDeudaVieja[]> {
+  listarDeudaVieja(dias: number = 30, ids: string[] = []): Observable<ClienteDeudaVieja[]> {
     return this.http.get<ClienteDeudaVieja[]>(`${this.baseUrl}/deuda-vieja`, {
-      params: { dias },
+      params: { dias, ...(ids.length ? { ids: ids.join(',') } : {}) },
     });
   }
 
-  actividad(): Observable<ActividadClientes> {
-    return this.http.get<ActividadClientes>(`${this.baseUrl}/actividad`);
+  actividad(ids: string[]): Observable<ActividadClientes> {
+    return this.http.get<ActividadClientes>(`${this.baseUrl}/actividad`, {
+      params: { ids: ids.join(',') },
+    });
+  }
+
+  contarActivosMes(): Observable<ActividadClientes> {
+    return this.http.get<ActividadClientes>(`${this.baseUrl}/actividad`, {
+      params: { soloTotal: true },
+    });
   }
 
   restaurarCliente(id: string): Observable<any> {
