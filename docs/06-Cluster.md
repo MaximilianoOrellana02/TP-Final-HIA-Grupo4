@@ -124,21 +124,24 @@ docker exec -it postgres_nodo1 patronictl -c /etc/patroni/patroni.yml list
 
 **Salida obtenida:**
 ```text
-+ Cluster: cluster_bancario (7438910293847102931) ---+----+-----------+
-| Member | Host       | Role    | State     | TL | Lag in MB |
-+--------+------------+---------+-----------+----+-----------+
-| nodo1  | nodo1:5432 | Leader  | running   |  1 |           |
-| nodo2  | nodo2:5432 | Replica | streaming |  1 |         0 |
-| nodo3  | nodo3:5432 | Replica | streaming |  1 |         0 |
-+--------+------------+---------+-----------+----+-----------+
++ Cluster: cluster_bancario (7707426265629032484) --------+-----+------------+-----+
+| Member | Host  | Role    | State     | TL | Receive LSN | Lag | Replay LSN | Lag |
++--------+-------+---------+-----------+----+-------------+-----+------------+-----+
+| nodo1  | nodo1 | Replica | streaming |  7 |   0/403F048 |   0 |  0/403F048 |   0 |
+| nodo2  | nodo2 | Replica | streaming |  7 |   0/403F048 |   0 |  0/403F048 |   0 |
+| nodo3  | nodo3 | Leader  | running   |  7 |             |     |            |     |
++--------+-------+---------+-----------+----+-------------+-----+------------+-----+
 ```
-* **Interpretación:** Se confirma la existencia de un único `Leader` en estado `running` y dos `Replica` en estado `streaming`, compartiendo el mismo *Timeline* (`TL = 1`) y con un retraso de replicación (`Lag in MB`) igual a **0**.
+
+![Verificación topológica del clúster con patronictl list](img/06/patronictl-list-cluster.png)
+
+* **Interpretación:** Se confirma la existencia de un único `Leader` (`nodo3`) en estado `running` y dos `Replica` (`nodo1` y `nodo2`) en estado `streaming`, compartiendo el mismo *Timeline* (`TL = 7`), la misma posición de LSN (`0/403F048`) y un retraso de replicación (`Lag`) igual a **0**.
 
 ### 3.2. Consistencia de Datos entre Primario y Réplicas
-Tras registrar operaciones desde la aplicación web (a través de `haproxy`), se consultó directamente una de las réplicas de solo lectura (`postgres_nodo3`) comprobando que los registros se replican de forma inmediata:
+Tras registrar operaciones desde la aplicación web (a través de `haproxy`), se consultó directamente una de las réplicas de solo lectura (`postgres_nodo1`) comprobando que los registros se replican de forma inmediata:
 
 ```bash
-docker exec -it postgres_nodo3 psql -U soderia -d soderia -c "SELECT count(*) FROM usuarios;"
+docker exec -it postgres_nodo1 psql -U soderia -d soderia -c "SELECT count(*) FROM usuarios;"
 ```
 
 ### 3.3. Monitoreo en Tiempo Real (Prometheus y Grafana)
@@ -149,17 +152,24 @@ docker exec -it postgres_nodo3 psql -U soderia -d soderia -c "SELECT count(*) FR
 
 ## 4. Prueba de Fallo y Recuperación (*Failover* y *Self-Healing*)
 
-Para demostrar que el sistema cuenta con **failover automático** y no depende de intervención manual, se ejecutó una simulación controlada de caída abrupta del nodo Primario:
+Para demostrar que el sistema cuenta con **failover automático** y no depende de intervención manual, se ejecutó una simulación controlada de caída abrupta del nodo Primario cuando **`nodo2`** operaba como Líder:
 
 ### Cronología de la Prueba
 
 | Fase | Tiempo | Acción Ejecutada | Comportamiento Observado en el Sistema |
 | :--- | :--- | :--- | :--- |
-| **1. Estado Normal** | `t = 0s` | Operación habitual de Sodería. | `nodo1` opera como **Leader** (Azul en Grafana, `UP` en HAProxy). `nodo2` y `nodo3` operan como **Replicas** (`streaming`). |
-| **2. Inyección de Falla** | `t = 1s` | `docker stop postgres_nodo1` | Se detiene abruptamente el contenedor del Líder sin apagado limpio. `nodo1` deja de renovar su llave TTL en `etcd`. |
-| **3. Detección y Elección** | `t ≈ 10-15s` | Vencimiento del TTL en `etcd`. | Patroni detecta la ausencia del Líder, compara el LSN de `nodo2` y `nodo3`, y promueve automáticamente a `nodo2` como nuevo **Leader** (`TL` incrementa a `2`). |
-| **4. Conmutación de Tráfico** | `t ≈ 15s` | Healthcheck de HAProxy (`:8008/primary`). | HAProxy marca `nodo1` como `DOWN` (rojo) y `nodo2` como `UP` (verde). El backend Node.js continúa operando sin reinicios ni pérdida de datos. |
-| **5. Autocuración (*Self-Healing*)** | `t = 45s` | `docker start postgres_nodo1` | Al reiniciar el contenedor caído, Patroni detecta que ya existe un nuevo Líder con `TL = 2`, degrada a `nodo1` automáticamente a **Replica** y sincroniza los cambios pendientes vía WAL. |
+| **1. Estado Normal** | `t = 0s` | Operación habitual de Sodería. | `nodo2` opera como **Leader** (línea amarilla en nivel `2 = Líder` en Grafana, `UP` en HAProxy). `nodo1` y `nodo3` operan como **Replicas** (`1 = Réplica` en `streaming`). |
+| **2. Inyección de Falla** | `t = 1s` (`~16:44:00`) | `docker stop postgres_nodo2` | Se detiene abruptamente el contenedor del Líder (`nodo2`). La línea amarilla de `nodo2` se corta al dejar de responder y no renovar su llave TTL en `etcd`. |
+| **3. Detección y Elección** | `t ≈ 10-15s` | Vencimiento del TTL en `etcd`. | Patroni detecta la caída de `nodo2`, compara el LSN de las réplicas activas (`nodo1` y `nodo3`), y promueve automáticamente a **`nodo3`** como nuevo **Leader** (la línea azul sube de `1 = Réplica` a `2 = Líder`). |
+| **4. Conmutación de Tráfico** | `t ≈ 15s` | Healthcheck de HAProxy (`:8008/primary`). | HAProxy marca `nodo2` como `DOWN` y enruta el tráfico a **`nodo3`** (`UP`). El Panel 1 de Grafana pasa a mostrar **`nodo3 (nodo3:8008) LÍDER (Primario)`** en azul y **`nodo1 (nodo1:8008) RÉPLICA (Esclavo)`** en verde. |
+| **5. Autocuración (*Self-Healing*)** | `t = 45s` | `docker start postgres_nodo2` | Al reiniciar el contenedor caído, Patroni detecta que **`nodo3`** ya es el nuevo Líder, degrada a `nodo2` automáticamente a **Replica** (`streaming`, `Lag = 0`) y sincroniza los cambios vía WAL. |
+
+![Evidencia de Failover en Grafana: caída del Líder nodo2 y promoción automática de nodo3](img/06/failover-nodo2-a-nodo3.jpg)
+
+* **Análisis de la evidencia visual (Tablero *Ciclo de Vida y Failover*):**
+  * En el **Panel 2 (*Ciclo de Vida de los 3 Nodos*)** se observa cómo la línea amarilla (**`Nodo nodo2:8008`**) se mantenía en el valor **`2` (Líder)** hasta las `16:44:00`, momento en que se produjo su caída.
+  * Inmediatamente después, la línea azul (**`Nodo nodo3:8008`**), que venía operando en el nivel **`1` (Réplica)** junto con **`Nodo nodo1:8008`** (línea verde), asciende automáticamente al nivel **`2` (Líder)** tomando el lugar de `nodo2`, mientras `nodo1` permanece estable en nivel `1` como réplica.
+  * En el **Panel 1 (*Estado y Rol Actual*)** se refleja el resultado final en vivo: **`nodo3` como LÍDER (Primario)** en azul y **`nodo1` como RÉPLICA (Esclavo)** en verde.
 
 ### Mecanismos de Protección de Datos durante el Fallo
 * **Prevención de *Split-Brain*:** Ningún nodo puede aceptar escrituras sin poseer el bloqueo exclusivo en `etcd`. Si un antiguo líder quedara aislado por red y luego volviera, Patroni lo fuerza a modo solo lectura antes de permitir transacciones conflictivas.
