@@ -62,12 +62,17 @@ Consulta directa al endpoint de Prometheus verificando que los tres nodos del cl
 docker exec prometheus_server wget -qO- "http://localhost:9090/api/v1/query?query=up{job='patroni_cluster'}"
 ```
 
-### 3.2. Telemetría Observada en Grafana (Captura de Pantalla)
-En la captura del tablero **Observabilidad Integral** se evidencian las siguientes métricas reales en ejecución:
+### 3.2. Telemetría Observada en Grafana (Capturas de Pantalla)
+En las capturas del tablero **Observabilidad Integral** se evidencian las siguientes métricas reales en ejecución:
 * **Panel 11 (Estado de Replicación Streaming):** Identifica a **`nodo3` como `PRIMARIO`** (tarjeta azul) y a **`nodo2` como `REPLICA`** (tarjeta verde en streaming activo).
 * **Panel 12 (Lag de Replicación en Tiempo Real):** Muestra una línea plana en **`0 B` (0 Bytes)** tanto para `Lag nodo1`, `Lag nodo2`, `Lag nodo3` como para `WAL Diff (nodo2)`, confirmando sincronización inmediata sin pérdida ni retraso de datos.
 * **Panel 3 (Tiempo de Actividad Continuo — Uptime Real):** Registra la curva ascendente continua de actividad de cada contenedor (`Servicio prometheus: 47.2 mins`, `Servicio cadvisor: 47.1 mins`, `Servicio postgres_cluster: 45.6 mins`, `Nodo nodo2: 21.1 mins`, `Nodo nodo3: 21.1 mins` y `Nodo nodo1: 7.63 mins`), permitiendo detectar al instante cualquier reinicio cuando una línea cae a `0 s`.
-* **Paneles 4 y 5 (CPU y Memoria RAM):** Registran el consumo real del entorno Docker oscilar entre **15 % y 20 % de CPU** y un uso estable de memoria RAM de **~3.2 GiB** totales.
+* **Paneles 4, 5, 6 y 7 (CPU, Memoria RAM, Disco y Tráfico de Red):** Registran el consumo real del entorno Docker oscilar entre **15 % y 20 % de CPU** (con picos de arranque de ~75 %), un uso estable de memoria RAM de **~3.3 GiB** totales (*Working Set* de 2.46 GiB), tamaño de la base `soderia` (`8.12 MiB` / `25.6 GiB` de contenedores) y tráfico de red entrante/saliente (`RX/TX` con pico de ~1.4 MB/s).
+* **Paneles 8 y 9 (Conexiones Activas y Consultas Lentas / Locks):** Muestran las sesiones activas en `pg_stat_activity` y el monitoreo de bloqueos y duración máxima de transacciones.
+
+![Paneles de recursos en Grafana: CPU, Memoria RAM, Disco y Tráfico de Red](img/10/grafana-recursos-hardware-red.png)
+
+![Paneles de recursos y conexiones activas a PostgreSQL en Grafana](img/10/grafana-recursos-y-conexiones-bd.jpg)
 
 ---
 
