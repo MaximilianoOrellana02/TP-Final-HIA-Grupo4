@@ -1,0 +1,127 @@
+El archivo [backend/Dockerfile](../backend/Dockerfile) utiliza dos etapas. La primera instala las dependencias con `npm ci` y compila TypeScript. La segunda incorpora los compilados, la configuración, las migraciones y los scripts necesarios para ejecutar la API.
+
+```dockerfile
+@@BACKEND@@
+```
+
+La etapa de ejecución configura `NODE_ENV=production` y utiliza el usuario `node`. El comando final ejecuta las migraciones pendientes antes de iniciar `dist/server.js`. `--env development` selecciona la entrada de configuración de Sequelize CLI existente en `backend/config/config.js`, que toma la conexión de las variables `DB_*`.
+
+## Dockerfile del frontend
+
+El archivo [frontend/Dockerfile](../frontend/Dockerfile) compila Angular con Node.js 22 y la configuración `docker`. La imagen final utiliza Nginx y recibe los archivos generados en `dist/soderia-frontend/browser`.
+
+```dockerfile
+@@FRONTEND@@
+```
+
+La URL de la API es `/api`, por lo que el navegador utiliza el mismo origen de la aplicación. Nginx dirige esas solicitudes al servicio backend.
+
+Los archivos `.dockerignore` reducen el contexto de construcción al excluir dependencias y compilados locales. El backend también excluye `.env`, documentación y pruebas de ese contexto.
+
+## Configuración de Nginx
+
+El archivo [frontend/nginx.conf](../frontend/nginx.conf) configura el servicio de archivos estáticos y el proxy hacia la API.
+
+```nginx
+@@NGINX@@
+```
+
+La regla `location /api/` reenvía las solicitudes a `backend:3001` conservando la ruta. La regla `try_files` permite acceder directamente a las rutas de Angular y devuelve `index.html` cuando corresponde.
+
+## Variables y entornos de ejecución
+
+Las variables se completan en `.env` a partir de [.env.example](../.env.example). El archivo `.env` se encuentra excluido de Git.
+
+| Variable | Uso |
+|---|---|
+| `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Base, usuario y contraseña de PostgreSQL. |
+| `JWT_SECRET` | Firma y verificación de los tokens de autenticación. |
+| `FRONTEND_URL` | Origen permitido de la interfaz y URL de recuperación de contraseña. |
+| `FRONTEND_PORT` | Puerto de acceso al frontend, con 8080 como valor predeterminado. |
+| `PGADMIN_EMAIL`, `PGADMIN_PASSWORD` | Credenciales de acceso a pgAdmin. |
+| `GMAIL_USER`, `GMAIL_APP_PASSWORD` | Configuración opcional para el envío de correos. |
+
+Para desarrollo, el backend dispone de `npm run dev` y el frontend de `npm start`. El despliegue con Docker compila los proyectos, ejecuta la API desde sus archivos JavaScript y sirve Angular mediante Nginx. El Compose revisado configura `MP_HABILITADO=false` para la integración de pagos.
+
+## Puesta en marcha y comprobación
+
+Los comandos se ejecutan desde la raíz del proyecto con Docker Desktop en funcionamiento.
+
+1. Preparar `.env` a partir de `.env.example` y completar las variables.
+2. Construir e iniciar los servicios.
+
+   ```powershell
+   docker compose up -d --build
+   ```
+
+3. Consultar el estado y los últimos mensajes del backend.
+
+   ```powershell
+   docker compose ps
+   docker compose logs --tail=50 backend
+   ```
+
+4. Abrir [la aplicación](http://localhost:8080) y comprobar la respuesta de [la API](http://localhost:8080/api/health).
+5. Iniciar sesión y crear un cliente desde la interfaz. Registrar un dato que permita identificarlo después.
+6. Recrear los contenedores de la aplicación y la base, conservando los volúmenes.
+
+   ```powershell
+   docker compose up -d --force-recreate db backend frontend
+   ```
+
+7. Volver a consultar el cliente desde la aplicación y guardar capturas como evidencia de persistencia.
+
+Para una base vacía, el proyecto dispone de un script de datos de demostración.
+
+```powershell
+docker compose exec backend node scripts/datos-demo.js
+```
+
+El script muestra las contraseñas generadas por consola y comprueba que la base esté vacía antes de cargar los datos.
+
+## Administración, backup y restauración
+
+Se accede a [pgAdmin](http://127.0.0.1:5050) con las credenciales `PGADMIN_EMAIL` y `PGADMIN_PASSWORD`. Al registrar el servidor se utiliza el host `db`, el puerto `5432` y los valores de `DB_NAME`, `DB_USER` y `DB_PASSWORD` del entorno.
+
+El servicio `backup` se ejecuta bajo demanda mediante el perfil definido en Compose.
+
+```powershell
+docker compose run --rm backup
+```
+
+La tarea utiliza `pg_dump --format=custom`, guarda la copia en `pg_backups` e imprime la ruta del archivo. Primero escribe un archivo temporal y lo renombra con la extensión `.dump` al finalizar. Si falla, `trap` retira el archivo temporal. En el YAML, `$$` conserva el signo `$` para su interpretación dentro del contenedor.
+
+Para probar la recuperación, se reemplaza `NOMBRE_DEL_ARCHIVO.dump` por el nombre impreso y se elige un nombre de base nuevo para cada prueba.
+
+```powershell
+docker compose run --rm backup 'createdb --maintenance-db=postgres soderia_restore && pg_restore --single-transaction --dbname=soderia_restore /backups/NOMBRE_DEL_ARCHIVO.dump'
+```
+
+Después se actualiza la lista de bases en pgAdmin y se comparan los datos de la base original y la restaurada.
+
+## Resultados registrados
+
+Se completó la comprobación funcional de la aplicación y de persistencia al recrear los contenedores durante el trabajo de dockerización. La prueba de backup y restauración del 12 de noviembre de 2026 dejó los siguientes resultados.
+
+| Verificación | Resultado |
+|---|---|
+| Base original | `soderia`. |
+| Base restaurada | `soderia_restore_20261112_160555`. |
+| Clientes | 7 filas en ambas bases. |
+| Entregas | 1 fila en ambas bases. |
+| Comparación de clientes | El contenido coincidió mediante una suma de comprobación. |
+| Tamaño de la copia | 26.853 bytes. |
+| Tiempo de restauración | Aproximadamente 0,08 segundos. |
+
+El registro de esa prueba se encuentra en `Evidencias/backup-restauracion.txt` del entorno local. La carpeta `Evidencias/` está excluida del repositorio mediante `.gitignore`.
+
+## Entregables de esta parte
+
+- Dockerfiles del frontend y del backend.
+- `docker-compose.yml` con servicios, dependencias, red y volúmenes.
+- `frontend/nginx.conf` para servir Angular y comunicarlo con la API.
+- Variables de ejemplo para preparar el entorno.
+- Procedimiento de instalación, ejecución y prueba de persistencia.
+- Servicio de backup y procedimiento de restauración con resultados registrados.
+
+La configuración documentada permite iniciar el entorno de la s
