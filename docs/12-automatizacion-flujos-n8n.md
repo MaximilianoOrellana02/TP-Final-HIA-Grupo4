@@ -155,7 +155,7 @@ Verificar en Mailpit (`http://localhost:8026`): email con asunto `[OK] Backup de
 Rename-Item ".\datos\backups\soderia-20261119T155931Z-kkKpaP.dump" "soderia-20261119T155931Z-kkKpaP.dump.bak"
 
 # Paso 2: Disparar el flujo — debe detectar el fallo
-Invoke-RestMethod -Uri "http://localhost:5678/webhook/verificar-backups" -Method POST -ContentType "application/json" -Body "{}"
+Get-ChildItem .\datos\backups\*.dump | Rename-Item -NewName { $_.Name + ".bak" }
 ```
 
 Verificar en PostgreSQL: `status = FAILED`, mensaje `[CRITICAL] Fallo en verificación de backups`.  
@@ -164,7 +164,7 @@ Verificar en Mailpit (`http://localhost:8026`): email rojo `[CRÍTICO] Fallo en 
 
 ```powershell
 # Paso 3: Restaurar el backup
-Rename-Item ".\datos\backups\soderia-20261119T155931Z-kkKpaP.dump.bak" "soderia-20261119T155931Z-kkKpaP.dump"
+Get-ChildItem .\datos\backups\*.bak | Rename-Item -NewName { $_.Name.Replace(".bak", "") }
 
 # Paso 4: Disparar de nuevo — debe auto-recuperarse
 Invoke-RestMethod -Uri "http://localhost:5678/webhook/verificar-backups" -Method POST -ContentType "application/json" -Body "{}"
