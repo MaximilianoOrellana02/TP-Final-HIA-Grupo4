@@ -39,7 +39,7 @@ Para evitar conflictos entre builds locales y actualizaciones automáticas desde
   - Sobreescribe `backend` y `frontend` con `build:` local (`soderia-backend:local`, `soderia-frontend:local`), desactiva Watchtower (`com.centurylinklabs.watchtower.enable=false` y `profiles: [disabled]` en `watchtower`) y habilita `develop.watch` (`action: rebuild`) para reconstrucción automática al editar archivos locales.
   - Comando de uso:
     ```powershell
-    docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --watch
+    docker compose -f docker-compose.yml -f docker-compose.local.yml up --build --watch
     ```
   - Para volver al consumo automático desde GHCR sin reiniciar el clúster ni perder datos:
     ```powershell

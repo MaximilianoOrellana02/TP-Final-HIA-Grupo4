@@ -1,6 +1,6 @@
 # Override para desarrollo local con rebuild automático (`docker compose watch`).
 # Uso:
-#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --watch
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up --build --watch
 
 services:
   backend:

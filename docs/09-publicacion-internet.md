@@ -9,8 +9,7 @@ La aplicación **Sodería** se publica de forma controlada mediante **Tailscale*
 | Servicio | Puerto Local en Host | Modo de Exposición | Alcance |
 | :--- | :--- | :--- | :--- |
 | **Aplicación Web (`frontend` / Nginx)** | `8080` (`0.0.0.0:8080->80`) | **Tailscale Funnel** (`https://maxy.tailafb40d.ts.net/`) | Acceso público HTTPS hacia el frontend y `/api/*` |
-| **pgAdmin** | `127.0.0.1:5050` | **Tailscale Serve** (`https://maxy.tailafb40d.ts.net:8443`) | Solo integrantes dentro de la **tailnet** (no público) |
-| **HAProxy Stats / Grafana / Prometheus / Mantis / n8n / Nextcloud** | `127.0.0.1:*` | Solo loopback local | Administración exclusiva desde el host |
+| **Herramientas internas** (`pgAdmin`, `Grafana`, `HAProxy`, `MantisBT`, `Mailpit`, `Nextcloud`, `n8n`, `Prometheus`, `Alertmanager`) | `127.0.0.1:<puerto>` | **Tailscale Serve** (`https://maxy.tailafb40d.ts.net:<puerto>`) | Solo dispositivos registrados dentro de la **tailnet** (no público) |
 | **PostgreSQL (`nodo1..3`, `haproxy:5432`) / `etcd`** | Sin publicar | Solo red interna `red_cluster` | Inaccesibles desde el host e Internet |
 
 ## 3. Flujo de Tráfico y Seguridad en el Borde
@@ -26,9 +25,9 @@ La aplicación **Sodería** se publica de forma controlada mediante **Tailscale*
   ```powershell
   tailscale funnel --bg 8080
   ```
-- **Publicar pgAdmin solo para la tailnet (Serve en `:8443`):**
+- **Publicar herramientas internas solo para la tailnet (Serve en su puerto):**
   ```powershell
-  tailscale serve --bg --https=8443 5050
+  tailscale serve --bg --https=5050 http://127.0.0.1:5050
   ```
 - **Consultar estado activo del túnel y reglas:**
   ```powershell
