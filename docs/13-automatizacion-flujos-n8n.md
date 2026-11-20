@@ -13,7 +13,7 @@ Los tres flujos de trabajo resuelven la orquestación del ciclo de vida de incid
 | **n8n Editor** | `http://localhost:5678` | Diseñador y orquestador de flujos de trabajo |
 | **MantisBT** | `http://localhost:8989` | Gestión de incidencias (tickets, notas y estados) |
 | **Mailpit** | `http://localhost:8026` | Servidor SMTP local de notificaciones interactivas |
-| **Nextcloud** | `http://localhost:8085` | Repositorio documental de informes generados por IA |
+| **Nextcloud** | `http://127.0.0.1:8082` (perfil `documentacion`) | Repositorio documental de informes generados por IA (`Soderia-TP-Final/04-Reportes-n8n/`) |
 | **Prometheus** | `http://localhost:9090` *(interno `red_cluster`)* | Recolección de telemetría y métricas |
 | **Alertmanager** | `http://localhost:9093` | Enrutador de alertas hacia el webhook de n8n |
 | **Grafana** | `http://localhost:3000` | Dashboards de monitoreo vinculados en los tickets |
@@ -24,7 +24,7 @@ Los tres flujos de trabajo resuelven la orquestación del ciclo de vida de incid
 ## 2. Flujo 1: Alertas Automáticas de Infraestructura y Ciclo de Vida de Incidentes
 
 * **Identificador n8n:** `PBXS83CAm5OGgvYb`
-* **Archivo versionado:** `cluster/observabilidad/flujo_01_alertas_infraestructura.json`
+* **Archivo versionado:** `n8n/workflows/flujo_01_alertas_infraestructura.json`
 * **Trigger:** Webhook HTTP `POST /webhook/soderia-alertas-infraestructura` con autenticación Basic Auth (`alertmanager`).
 * **Estado:** Publicado y Activo (`active: true`).
 
@@ -87,7 +87,7 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:5678/webhook/soderia-alert
 ## 3. Flujo 2: Verificación de Backups de PostgreSQL
 
 * **Identificador n8n:** `KmBG5FtntcCHYXoo`
-* **Archivo versionado:** `cluster/observabilidad/flujo_02_verificacion_backups.json`
+* **Archivo versionado:** `n8n/workflows/flujo_02_verificacion_backups.json`
 * **Trigger:** Programado diariamente cada 24 horas (`scheduleTrigger`).
 * **Estado:** Publicado y Activo (`active: true`).
 
@@ -134,7 +134,7 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:5678/webhook/soderia-alert
 ## 4. Flujo 3: Informe de Rendimiento con RAG e IA Generativa
 
 * **Identificador n8n:** `dHwOKucI5nMcw77j`
-* **Archivo versionado:** `cluster/observabilidad/flujo_03_informe_rag_ia.json`
+* **Archivo versionado:** `n8n/workflows/flujo_03_informe_rag_ia.json`
 * **Trigger:** Programado diariamente cada 24 horas (`scheduleTrigger`) o ejecutable bajo demanda.
 * **Estado:** Publicado y Activo (`active: true`).
 
@@ -156,7 +156,9 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:5678/webhook/soderia-alert
 2. Abrir el flujo **`03 - Informe de Rendimiento con RAG e IA Generativa`**.
 3. Hacer clic en **Execute Workflow** (o *Test Step* en el disparador).
 4. **Verificar en Nextcloud:**
-   * Ingresar a `http://localhost:8085` (Usuario: `admin` / Contraseña: `admin123`).
+   * Levantar Nextcloud (`docker compose --profile documentacion up -d nextcloud nextcloud-db`) y ejecutar `.\scripts\setup-nextcloud.ps1`.
+   * Ingresar a `http://127.0.0.1:8082` con las credenciales configuradas en `.env` (o usar `n8n_bot` en WebDAV sobre `Soderia-TP-Final/04-Reportes-n8n/`).
+   * Inicializar las tablas auxiliares en PostgreSQL ejecutando `n8n/init-n8n-db.sql`.
    * En la carpeta de archivos, abrir el nuevo documento generado `informe_rag_rendimiento_*.md`.
 5. **Verificar en Mailpit:**
    * Ingresar a `http://localhost:8026`.

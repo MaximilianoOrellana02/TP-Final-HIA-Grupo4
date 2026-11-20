@@ -413,6 +413,7 @@ services:
       WEBHOOK_URL: http://localhost:5678/
       N8N_EDITOR_BASE_URL: http://localhost:5678/
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?Debes configurar N8N_ENCRYPTION_KEY}
+      MANTIS_API_TOKEN: ${MANTIS_API_TOKEN:-}
       N8N_SECURE_COOKIE: "false"
       N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
       GENERIC_TIMEZONE: America/Argentina/Jujuy

@@ -8,7 +8,7 @@ groups:
           severity: critical
         annotations:
           summary: "Nodo de PostgreSQL caído"
-          description: "El nodo 1 de PostgreSQL dejo de responder."
+          description: "El nodo {{ $labels.instance }} de PostgreSQL dejo de responder."
 
       - alert: SoderiaTargetDown
         expr: up{job=~"postgres_cluster|cadvisor|patroni_cluster"} == 0

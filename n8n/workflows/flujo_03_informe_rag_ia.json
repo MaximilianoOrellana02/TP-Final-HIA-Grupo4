@@ -1,0 +1,371 @@
+{
+    "updatedAt":  "2026-11-19T06:17:36.695Z",
+    "createdAt":  "2026-11-19T02:07:25.596Z",
+    "id":  "dHwOKucI5nMcw77j",
+    "name":  "03 - Informe de Rendimiento con RAG e IA Generativa",
+    "description":  null,
+    "active":  true,
+    "isArchived":  false,
+    "nodes":  [
+                  {
+                      "parameters":  {
+                                         "rule":  {
+                                                      "interval":  [
+                                                                       {
+                                                                           "field":  "hours",
+                                                                           "hoursInterval":  24
+                                                                       }
+                                                                   ]
+                                                  }
+                                     },
+                      "id":  "bde857f4-3877-45da-83e3-746730d1fc71",
+                      "name":  "Ejecución Programada (Diaria)",
+                      "type":  "n8n-nodes-base.scheduleTrigger",
+                      "typeVersion":  1.2,
+                      "position":  [
+                                       -608,
+                                       -48
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "url":  "http://prometheus:9090/api/v1/query",
+                                         "sendQuery":  true,
+                                         "queryParameters":  {
+                                                                 "parameters":  [
+                                                                                    {
+                                                                                        "name":  "query",
+                                                                                        "value":  "up"
+                                                                                    }
+                                                                                ]
+                                                             },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "97c9921c-442b-4bdc-9fbd-8448682350ac",
+                      "name":  "Obtener Métricas Prometheus",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.1,
+                      "position":  [
+                                       -384,
+                                       -48
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Captura el texto generado por el nodo de Gemini (Message a model)\nconst aiResponse = $json?.content?.parts?.[0]?.text || $json?.text || $(\u0027Construir Prompt Enriquecido (RAG)\u0027).first().json.promptRAG;\nconst prevData = $(\u0027Construir Prompt Enriquecido (RAG)\u0027).first().json;\n\n// Genera una marca de tiempo única (Ejemplo: 2026-11-19_03-15-00)\nconst now = new Date();\nconst timeStamp = now.toISOString().split(\u0027.\u0027)[0].replace(\u0027T\u0027, \u0027_\u0027).replace(/:/g, \u0027-\u0027);\n\nreturn [{\n  json: {\n    ...prevData,\n    reportFileName: `informe_rag_rendimiento_${timeStamp}.md`,\n    reportContent: aiResponse\n  }\n}];"
+                                     },
+                      "id":  "d0a19c17-237d-48e4-979c-39a3d257f738",
+                      "name":  "Procesar Respuesta de IA",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       496,
+                                       -48
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "executeQuery",
+                                         "query":  "INSERT INTO public.n8n_execution_logs (\n    workflow_name,\n    execution_id,\n    alert_name,\n    severity,\n    status,\n    details\n) VALUES (\n    \u002703 - Informe de Rendimiento con RAG e IA Generativa\u0027,\n    \u0027{{ $execution.id }}\u0027,\n    \u0027{{ $(\u0027Procesar Respuesta de IA\u0027).item.json.alertname }}\u0027,\n    \u0027{{ $(\u0027Procesar Respuesta de IA\u0027).item.json.severity }}\u0027,\n    \u0027{{ $(\u0027Procesar Respuesta de IA\u0027).item.json.status }}\u0027,\n    \u0027Reporte RAG+IA Generativa procesado exitosamente con disponibilidad del {{ $(\u0027Procesar Respuesta de IA\u0027).item.json.healthRatio }}\u0027\n);",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "840f619d-05f0-4839-8936-10068f2c7797",
+                      "name":  "Registrar Auditoría Postgres",
+                      "type":  "n8n-nodes-base.postgres",
+                      "typeVersion":  2.4,
+                      "position":  [
+                                       1152,
+                                       -48
+                                   ],
+                      "credentials":  {
+                                          "postgres":  {
+                                                           "id":  "jFvi9wNotxhtrCpk",
+                                                           "name":  "Postgres account"
+                                                       }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "executeQuery",
+                                         "query":  "SELECT service_name, issue_type, content FROM public.infrastructure_runbooks;",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "56bcc920-9fd4-488b-afb1-8f6235580fa0",
+                      "name":  "Recuperar Contexto RAG (Runbooks)1",
+                      "type":  "n8n-nodes-base.postgres",
+                      "typeVersion":  2.4,
+                      "position":  [
+                                       -160,
+                                       -48
+                                   ],
+                      "credentials":  {
+                                          "postgres":  {
+                                                           "id":  "jFvi9wNotxhtrCpk",
+                                                           "name":  "Postgres account"
+                                                       }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "fromEmail":  "alertas@soderia.local",
+                                         "toEmail":  "operaciones@soderia.local",
+                                         "subject":  "=[INFORME RAG+IA Generativa] Reporte Técnico de Infraestructura",
+                                         "text":  "={{ $(\u0027Procesar Respuesta de IA\u0027).item.json.reportContent }}\n\nEl reporte analizado y redactado por IA fue guardado exitosamente en Nextcloud.",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "fbb6ab39-2564-4201-94a9-29f6670ee210",
+                      "name":  "Notificar Mailpit (Informe RAG)1",
+                      "type":  "n8n-nodes-base.emailSend",
+                      "typeVersion":  2,
+                      "position":  [
+                                       928,
+                                       -48
+                                   ],
+                      "webhookId":  "a8bcc69c-095c-4e5b-8e20-c84fa9b7e79e",
+                      "credentials":  {
+                                          "smtp":  {
+                                                       "id":  "XvYaqxpH3aTt2CJ4",
+                                                       "name":  "SMTP account"
+                                                   }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "modelId":  {
+                                                         "__rl":  true,
+                                                         "value":  "models/gemini-3.1-flash-lite",
+                                                         "mode":  "list",
+                                                         "cachedResultName":  "Gemini 3.1 Flash Lite"
+                                                     },
+                                         "messages":  {
+                                                          "values":  [
+                                                                         {
+                                                                             "content":  "={{ $json.promptRAG }}"
+                                                                         }
+                                                                     ]
+                                                      },
+                                         "builtInTools":  {
+
+                                                          },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "@n8n/n8n-nodes-langchain.googleGemini",
+                      "typeVersion":  1.2,
+                      "position":  [
+                                       192,
+                                       -208
+                                   ],
+                      "id":  "24248d1c-b256-4f0b-8c10-4de2c59e4840",
+                      "name":  "Message a model",
+                      "credentials":  {
+                                          "googlePalmApi":  {
+                                                                "id":  "w6BHvyQ4rIr5BnEV",
+                                                                "name":  "Google Gemini(PaLM) Api account"
+                                                            }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const metrics = $(\u0027Obtener Métricas Prometheus\u0027).first().json?.data?.result || [];\nconst runbooks = $(\u0027Recuperar Contexto RAG (Runbooks)1\u0027).all().map(item =\u003e item.json);\n\nlet downServices = [];\nlet upServices = [];\n\nmetrics.forEach(m =\u003e {\n  const job = m.metric.job || \u0027desconocido\u0027;\n  const instance = m.metric.instance || \u0027desconocida\u0027;\n  if (m.value[1] === \u00271\u0027) {\n    upServices.push(`${job} (${instance})`);\n  } else {\n    downServices.push(`${job} (${instance})`);\n  }\n});\n\nconst total = upServices.length + downServices.length;\nconst ratio = total \u003e 0 ? ((upServices.length / total) * 100).toFixed(1) : \u00270\u0027;\n\nlet relevantContext = \u0027\u0027;\nif (downServices.length \u003e 0) {\n  relevantContext = runbooks.filter(r =\u003e r.service_name === \u0027prometheus\u0027 || r.issue_type === \u0027target_down\u0027)\n                             .map(r =\u003e r.content).join(\u0027\\n\u0027);\n} else {\n  relevantContext = \u0027Todos los servicios operan con normalidad. Seguir pautas estándar de mantenimiento.\u0027;\n}\n\nconst promptRAG = `Eres un Ingeniero DevOps Sr. Genera un reporte técnico de infraestructura en formato Markdown para el equipo de operaciones.\n\nDATOS EN TIEMPO REAL DEL CLÚSTER:\n- Disponibilidad actual: ${ratio}%\n- Servicios Activos (UP): ${upServices.join(\u0027, \u0027)}\n- Servicios Caídos (DOWN): ${downServices.length \u003e 0 ? downServices.join(\u0027, \u0027) : \u0027Ninguno\u0027}\n\nMANUALES Y PROCEDIMIENTOS OPERATIVOS RECUPERADOS (RAG):\n${relevantContext}\n\nREQUISITOS DEL INFORME:\n1. Resumen Ejecutivo claro y conciso.\n2. Evaluación Diagnóstica de los servicios.\n3. Recomendaciones y Plan de Acción basado strictly en los procedimientos del RAG brindados.\n4. Responde de forma concisa en menos de 300 palabras.`;\n\nconst dateStr = new Date().toISOString().split(\u0027T\u0027)[0];\n\nreturn [{\n  json: {\n    reportFileName: `informe_rag_rendimiento_${dateStr}.md`,\n    promptRAG: promptRAG,\n    healthRatio: `${ratio}%`,\n    status: downServices.length === 0 ? \u0027SUCCESS\u0027 : \u0027WARNING\u0027,\n    alertname: \u0027RAG_Performance_Report\u0027,\n    severity: downServices.length === 0 ? \u0027info\u0027 : \u0027warning\u0027\n  }\n}];"
+                                     },
+                      "id":  "534227bc-6b74-4b06-af08-fe78a0c7b0db",
+                      "name":  "Construir Prompt Enriquecido (RAG)",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       48,
+                                       -48
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "PUT",
+                                         "url":  "=http://nextcloud/remote.php/dav/files/n8n_bot/Soderia-TP-Final/04-Reportes-n8n/{{ $json.reportFileName }}",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "text/markdown; charset=utf-8"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "contentType":  "raw",
+                                         "rawContentType":  "text/markdown",
+                                         "body":  "={{ $json.reportContent }}",
+                                         "options":  {
+
+                                                     },
+                                         "authentication":  "genericCredentialType",
+                                         "genericAuthType":  "httpBasicAuth"
+                                     },
+                      "id":  "bab91406-6a91-4e47-ab2f-9834e631081b",
+                      "name":  "Guardar Informe en Nextcloud",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.1,
+                      "position":  [
+                                       704,
+                                       -48
+                                   ]
+                  }
+              ],
+    "connections":  {
+                        "Ejecución Programada (Diaria)":  {
+                                                              "main":  [
+                                                                           [
+                                                                               {
+                                                                                   "node":  "Obtener Métricas Prometheus",
+                                                                                   "type":  "main",
+                                                                                   "index":  0
+                                                                               }
+                                                                           ]
+                                                                       ]
+                                                          },
+                        "Obtener Métricas Prometheus":  {
+                                                            "main":  [
+                                                                         [
+                                                                             {
+                                                                                 "node":  "Recuperar Contexto RAG (Runbooks)1",
+                                                                                 "type":  "main",
+                                                                                 "index":  0
+                                                                             }
+                                                                         ]
+                                                                     ]
+                                                        },
+                        "Procesar Respuesta de IA":  {
+                                                         "main":  [
+                                                                      [
+                                                                          {
+                                                                              "node":  "Guardar Informe en Nextcloud",
+                                                                              "type":  "main",
+                                                                              "index":  0
+                                                                          }
+                                                                      ]
+                                                                  ]
+                                                     },
+                        "Recuperar Contexto RAG (Runbooks)1":  {
+                                                                   "main":  [
+                                                                                [
+                                                                                    {
+                                                                                        "node":  "Construir Prompt Enriquecido (RAG)",
+                                                                                        "type":  "main",
+                                                                                        "index":  0
+                                                                                    }
+                                                                                ]
+                                                                            ]
+                                                               },
+                        "Notificar Mailpit (Informe RAG)1":  {
+                                                                 "main":  [
+                                                                              [
+                                                                                  {
+                                                                                      "node":  "Registrar Auditoría Postgres",
+                                                                                      "type":  "main",
+                                                                                      "index":  0
+                                                                                  }
+                                                                              ]
+                                                                          ]
+                                                             },
+                        "Message a model":  {
+                                                "main":  [
+                                                             [
+                                                                 {
+                                                                     "node":  "Procesar Respuesta de IA",
+                                                                     "type":  "main",
+                                                                     "index":  0
+                                                                 }
+                                                             ]
+                                                         ]
+                                            },
+                        "Construir Prompt Enriquecido (RAG)":  {
+                                                                   "main":  [
+                                                                                [
+                                                                                    {
+                                                                                        "node":  "Message a model",
+                                                                                        "type":  "main",
+                                                                                        "index":  0
+                                                                                    }
+                                                                                ]
+                                                                            ]
+                                                               },
+                        "Guardar Informe en Nextcloud":  {
+                                                             "main":  [
+                                                                          [
+                                                                              {
+                                                                                  "node":  "Notificar Mailpit (Informe RAG)1",
+                                                                                  "type":  "main",
+                                                                                  "index":  0
+                                                                              }
+                                                                          ]
+                                                                      ]
+                                                         }
+                    },
+    "settings":  {
+                     "executionOrder":  "v1",
+                     "binaryMode":  "separate",
+                     "availableInMCP":  true
+                 },
+    "staticData":  {
+                       "node:Ejecución Programada (Diaria)":  {
+                                                                  "recurrenceRules":  [
+                                                                                          null
+                                                                                      ],
+                                                                  "recurrenceRuleSignatures":  [
+                                                                                                   "hours:24"
+                                                                                               ]
+                                                              }
+                   },
+    "meta":  {
+                 "templateCredsSetupCompleted":  true
+             },
+    "nodeGroups":  [
+
+                   ],
+    "pinData":  {
+
+                },
+    "versionId":  "8c11dd7d-46d0-44a7-9b05-07006c5748ea",
+    "activeVersionId":  "8c11dd7d-46d0-44a7-9b05-07006c5748ea",
+    "versionCounter":  57,
+    "triggerCount":  1,
+    "sourceWorkflowId":  null,
+    "tags":  [
+
+             ],
+    "shared":  [
+                   {
+                       "updatedAt":  "2026-11-19T02:07:25.599Z",
+                       "createdAt":  "2026-11-19T02:07:25.599Z",
+                       "role":  "workflow:owner",
+                       "workflowId":  "dHwOKucI5nMcw77j",
+                       "projectId":  "JAScrgV9pshmtZx7",
+                       "project":  {
+                                       "updatedAt":  "2026-11-18T00:22:01.791Z",
+                                       "createdAt":  "2026-11-18T00:18:06.166Z",
+                                       "id":  "JAScrgV9pshmtZx7",
+                                       "name":  "christian guari \u003cchristianguari@gmail.com\u003e",
+                                       "type":  "personal",
+                                       "icon":  null,
+                                       "description":  null,
+                                       "customTelemetryTags":  [
+
+                                                               ],
+                                       "creatorId":  "d0270a38-a821-4663-8783-45aec192b682"
+                                   }
+                   }
+               ],
+    "versionMetadata":  {
+                            "name":  null,
+                            "description":  null
+                        }
+}
