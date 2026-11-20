@@ -67,19 +67,19 @@ El [Registro de reuniones Scrum](02-reuniones-scrum.md) resume las reuniones inf
 
 Las capturas del equipo muestran el proyecto, las épicas, una tarea con su criterio de aceptación y los cuatro sprints:
 
-![Tablero Scrum de Jira](../img/02_/board.png)
+![Tablero Scrum de Jira](img/02_/board.png)
 
-![Cinco épicas del proyecto](../img/02_/lista.png)
+![Cinco épicas del proyecto](img/02_/lista.png)
 
-![Detalle y criterio de aceptación de HIA-2](../img/02_/HIA-2.png)
+![Detalle y criterio de aceptación de HIA-2](img/02_/HIA-2.png)
 
-![Sprint 1 con objetivo y tareas](../img/02_/sprint-1.png)
+![Sprint 1 con objetivo y tareas](img/02_/sprint-1.png)
 
-![Sprint 2 con objetivo y tareas](../img/02_/sprint-2.png)
+![Sprint 2 con objetivo y tareas](img/02_/sprint-2.png)
 
-![Sprint 3 con objetivo y tareas](../img/02_/sprint-3.png)
+![Sprint 3 con objetivo y tareas](img/02_/sprint-3.png)
 
-![Sprint 4 con objetivo y tareas](../img/02_/sprint-4.png)
+![Sprint 4 con objetivo y tareas](img/02_/sprint-4.png)
 
 Las siete capturas de esta sección también están adjuntas a [HIA-2](https://huellsnicolasr.atlassian.net/browse/HIA-2). Documentan la estructura y el seguimiento inicial del proyecto; no acreditan por sí solas la realización de reuniones.
 
