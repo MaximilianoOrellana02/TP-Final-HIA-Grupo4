@@ -9,8 +9,11 @@ Aplicación web para gestionar el reparto de una sodería: clientes por barrio, 
 | `backend/` | API REST en Node.js + Express + TypeScript, con Sequelize y PostgreSQL |
 | `frontend/` | Aplicación Angular servida por nginx |
 | `cluster/` | Clúster PostgreSQL de alta disponibilidad: etcd + Patroni (3 nodos) + HAProxy + observabilidad |
-| `docker-compose.yml` | Levanta **todo** el sistema (clúster, base de datos, backend, frontend y monitoreo) en un solo archivo |
+| `n8n/` | Flujos de automatización exportados (`workflows/`) y script auxiliar SQL (`init-n8n-db.sql`) |
+| `docker-compose.yml` | Levanta el sistema con imágenes de GHCR + Watchtower (y perfiles opcionales) |
+| `docker-compose.local.yml` | Override para desarrollo local con `build` y `docker compose watch` |
 | `datos/` | Persistencia local de pgAdmin y de los backups (bind mounts) |
+| `docs/` | Documentación técnica por punto del TP Integrador |
 
 ## Cómo levantarlo
 
@@ -18,10 +21,16 @@ Requisitos: Docker Desktop.
 
 1. Copiar `.env.example` como `.env` y completar las contraseñas y el `JWT_SECRET`.
    Sin `.env` el sistema también arranca: usa valores de desarrollo (`soderia` / `soderia_local`).
-2. Levantar todo:
+2. Levantar el entorno (modo GHCR + Watchtower):
 
    ```bash
-   docker compose up -d --build
+   docker compose up -d
+   ```
+
+   Para compilar y desarrollar localmente con recarga automática (`watch`):
+
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.local.yml up --build --watch
    ```
 
 3. Esperar el primer arranque (entre 1 y 2 minutos). El clúster se inicializa solo: etcd elige
@@ -43,12 +52,12 @@ El script muestra por consola las contraseñas generadas.
 |---|---|---|
 | `etcd` | etcd 3.5 | ninguno (solo red interna) |
 | `nodo1` / `nodo2` / `nodo3` | PostgreSQL 17 + Patroni | ninguno (5432 y 8008 solo internos) |
-| `haproxy` | HAProxy | `7000` (estadísticas); `5432` **no** se publica al host |
+| `haproxy` | HAProxy | `127.0.0.1:7000` (estadísticas); `5432` **no** se publica al host |
 | `backend` | Node 22 | ninguno (se accede por el frontend en `/api`) |
 | `frontend` | nginx | `8080` |
-| `pgadmin` | pgAdmin 4 | `5050` (solo en `127.0.0.1`) |
-| `prometheus` | Prometheus | ninguno (solo red interna) |
-| `grafana` | Grafana | `3000` |
+| `pgadmin` | pgAdmin 4 | `127.0.0.1:5050` |
+| `prometheus` | Prometheus | `127.0.0.1:9090` |
+| `grafana` | Grafana | `127.0.0.1:3000` |
 | `postgres_exporter` | postgres-exporter | ninguno (solo red interna) |
 | `cadvisor_monitor` | cAdvisor | ninguno (solo red interna) |
 
@@ -77,7 +86,7 @@ aplicación se declaran en el mismo archivo y se resuelven entre sí por nombre 
 | MantisBT | <http://localhost:8989> |
 | Mailpit (Correo de Alertas) | <http://localhost:8026> |
 | Nextcloud (Gestión Documental) | <http://127.0.0.1:8082> (perfil `documentacion`, credenciales en `.env`) |
-| Prometheus | solo interno: `http://prometheus:9090` dentro de `red_cluster` |
+| Prometheus | <http://127.0.0.1:9090> (y `http://prometheus:9090` dentro de `red_cluster`) |
 | PostgreSQL (HAProxy) | solo interno: `haproxy:5432` (o el alias `db:5432`) |
 
 ## Comprobar el clúster
@@ -126,7 +135,7 @@ queda sin líder.
 Para generar una copia bajo demanda, ejecutá desde la raíz del proyecto:
 
 ```bash
-docker compose run --rm backup
+docker compose --profile backup run --rm backup
 ```
 
 El servicio imprime la ruta del archivo `.dump` y lo conserva en `datos/backups`.
@@ -159,9 +168,9 @@ El entorno cuenta con **n8n** (`http://localhost:5678`, perfil `automatizacion`)
 
 1. **Flujo 1: Alertas Automáticas de Infraestructura:** Deduplicación inteligente, ciclo de vida completo (`firing`/`resolved`), auto-resolución de tickets en MantisBT, telemetría en vivo desde Prometheus, asignación preventiva por matriz de roles y notificaciones interactivas.
 2. **Flujo 2: Verificación de Backups de PostgreSQL:** Validación diaria del estado, tamaño y antigüedad de los backups en `/backups`, con emisión de incidencias en MantisBT y alertas ante anomalías.
-3. **Flujo 3: Informe de Rendimiento con RAG e IA Generativa:** Recolección de telemetría de Prometheus combinada con manuales operativos en PostgreSQL (`infrastructure_runbooks`), redacción automatizada de reportes técnicos con Google Gemini y almacenamiento en Nextcloud (`http://127.0.0.1:8082`, perfil `documentacion`).
+3. **Flujo 3: Informe de Rendimiento Asistido por IA:** Recolección de telemetría de Prometheus combinada con guías operativas en PostgreSQL (`infrastructure_runbooks`), redacción automatizada de reportes técnicos con Google Gemini y almacenamiento en Nextcloud (`http://127.0.0.1:8082`, perfil `documentacion`).
 
-Para la guía detallada de arquitectura, variables y pasos de verificación, consultar la documentación en [docs/13-automatizacion-flujos-n8n.md](docs/13-automatizacion-flujos-n8n.md).
+Para la guía detallada de arquitectura, variables y pasos de verificación, consultar [docs/13-automatizacion-flujos-n8n.md](docs/13-automatizacion-flujos-n8n.md) y el mapa completo de documentación en [docs/15-backup-restauracion-y-limitaciones.md](docs/15-backup-restauracion-y-limitaciones.md).
 
 ## Modelo de datos
 
